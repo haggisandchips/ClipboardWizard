@@ -1,62 +1,77 @@
 ﻿using ClipboardWizard.Model;
+using ClipboardWizard.Service;
+using ClipboardWizard.ViewModel.Command;
 using System;
 using System.Collections.ObjectModel;
-using System.Windows.Input;
+using System.ComponentModel;
 using static WK.Libraries.SharpClipboardNS.SharpClipboard;
 
 namespace ClipboardWizard.ViewModel
 {
     public class WizardViewModel
     {
-        public ObservableCollection<SnippetModel> Snippets { get; set; } = new();
+        public ObservableCollection<SnippetViewModel> Snippets { get; set; } = new();
 
         public bool Recording { get; set; }
 
-        private SnippetModel activeSnippet;
+        private SnippetViewModel _activeSnippet;
 
         public WizardViewModel()
         {
+            SnippetManager.LoadSnippets()
+                .ConvertAll(snippet => new SnippetViewModel(snippet, State.Inactive))
+                .ForEach(vm => Snippets.Add(vm));
+
             App.ClipboardMonitor.ClipboardChanged += ClipboardManager_ClipboardChanged;
         }
 
         private void ClipboardManager_ClipboardChanged(object sender, ClipboardChangedEventArgs e)
         {
-            if (e.ContentType != ContentTypes.Text) { return; }
+            if (e.ContentType != ContentTypes.Text)
+            {
+                return;
+            }
 
             string content = e.Content.ToString();
             if (string.IsNullOrWhiteSpace(content))
             {
-                if (activeSnippet != null)
+                if (_activeSnippet == null)
                 {
-                    activeSnippet.State = State.Inactive;
-                    activeSnippet = null;
+                    return;
                 }
 
-                return;
+                _activeSnippet.State = State.Inactive;
+                _activeSnippet = null;
             }
 
-            if (activeSnippet != null)
+            if (_activeSnippet != null)
             {
-                if (activeSnippet.Content.Equals(content, StringComparison.Ordinal)) { return; }
+                if (_activeSnippet.Snippet.Content.Equals(content, StringComparison.Ordinal))
+                {
+                    return;
+                }
 
-                activeSnippet.State = State.Inactive;
-                activeSnippet = null;
+                _activeSnippet.State = State.Inactive;
+                _activeSnippet = null;
             }
 
-            foreach (SnippetModel snippet in Snippets)
+            foreach (SnippetViewModel snippet in Snippets)
             {
-                if (snippet.Content.Equals(content, StringComparison.Ordinal))
+                if (snippet.Snippet.Content.Equals(content, StringComparison.Ordinal))
                 {
                     snippet.State = State.Active;
-                    activeSnippet = snippet;
+                    _activeSnippet = snippet;
                     break;
                 }
             }
 
-            if (activeSnippet == null)
+            if (_activeSnippet == null && Recording)
             {
-                activeSnippet = new(content, State.Active);
-                Snippets.Add(activeSnippet);
+                Snippet snippet = new Snippet() { Content = content };
+                SnippetManager.SaveSnippet(snippet);
+
+                _activeSnippet = new(snippet, State.Active);
+                Snippets.Add(_activeSnippet);
             }
         }
     }

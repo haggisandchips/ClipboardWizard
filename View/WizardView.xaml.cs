@@ -9,7 +9,7 @@ namespace ClipboardWizard.View
     /// <summary>
     /// Interaction logic for WizardView.xaml
     /// </summary>
-    public partial class WizardView : Window
+    public partial class WizardView
     {
         public UniformGrid SnippetsUniformGrid { get; private set; }
 

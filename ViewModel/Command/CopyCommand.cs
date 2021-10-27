@@ -22,7 +22,7 @@ namespace ClipboardWizard.ViewModel.Command
 
         public void Execute(object parameter)
         {
-            Clipboard.SetText((parameter as SnippetModel).Content);
+            Clipboard.SetText((parameter as SnippetViewModel).Snippet.Content);
         }
     }
 }

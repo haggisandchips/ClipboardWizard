@@ -3,19 +3,18 @@ using System.ComponentModel;
 
 namespace ClipboardWizard.Model
 {
-    public class SnippetModel : INotifyPropertyChanged
+    public class SnippetViewModel : INotifyPropertyChanged
     {
 
-        private string content;
-        public string Content
+        private Snippet snippet;
+        public Snippet Snippet
         {
-            get { return content; }
+            get { return snippet; }
             set {
-                content = value;
-                OnPropertyChanged(nameof(Content));
+                snippet = value;
+                OnPropertyChanged(nameof(Snippet));
             }
         }
-
 
         private State state;
         public State State
@@ -28,13 +27,15 @@ namespace ClipboardWizard.Model
             }
         }
 
-        public CopyCommand CopyCommand { get; } = new();
+        public CopyCommand Copy {
+            get; 
+        } = new();
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public SnippetModel(string content, State state)
+        public SnippetViewModel(Snippet snippet, State state)
         {
-            Content = content;
+            Snippet = snippet;
             State = state;
         }
 

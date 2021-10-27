@@ -12,15 +12,19 @@
         
         <LinearGradientBrush x:Key="activeGradient" StartPoint="0,0" EndPoint="1,1">
             <LinearGradientBrush.GradientStops>
-                <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                <GradientStop Color="LightGreen" Offset="1"/>
+                <GradientStop Color="#FFE9FBE9" Offset="0"/>
+                <GradientStop Color="#FF90EE90" Offset="0.5"/>
+                <GradientStop Color="#FF90EE90" Offset="0.8"/>
+                <GradientStop Color="#FF98FB98" Offset="1"/>
             </LinearGradientBrush.GradientStops>
         </LinearGradientBrush>
 
         <LinearGradientBrush x:Key="inactiveGradient" StartPoint="0,0" EndPoint="1,1">
             <LinearGradientBrush.GradientStops>
-                <GradientStop Color="#FFFFFFFF" Offset="0"/>
-                <GradientStop Color="LightCyan" Offset="1"/>
+                <GradientStop Color="#FFFFD7CC" Offset="0"/>
+                <GradientStop Color="#FFFFD766" Offset="0.5"/>
+                <GradientStop Color="#FFFFD766" Offset="0.8"/>
+                <GradientStop Color="#FFFFD7AA" Offset="1"/>
             </LinearGradientBrush.GradientStops>
         </LinearGradientBrush>
 
@@ -61,7 +65,7 @@
     </UserControl.Resources>
     
     <DockPanel Height="150">
-        <Button Content="{Binding Content}" Command="{Binding CopyCommand}" CommandParameter="{Binding}" Padding="5" Margin="5">
+        <Button Content="{Binding Snippet.Content}" Command="{Binding Copy}" CommandParameter="{Binding}" Padding="5" Margin="5">
             <Button.Style>
                 <MultiBinding Converter="{StaticResource styleConverter}">
                     <Binding Path="State"/>
