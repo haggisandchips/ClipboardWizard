@@ -65,12 +65,7 @@
         <local:StyleConverter x:Key="styleConverter"/>
     </UserControl.Resources>
     
-    <DockPanel Height="150">
-        <ToolBarTray DockPanel.Dock="Bottom">
-            <ToolBar>
-                <Button Command="{Binding Delete}" CommandParameter="{Binding}"><fa5:FontAwesome Icon="Solid_Trash" /></Button>
-            </ToolBar>
-        </ToolBarTray>
+    <Grid Height="150">
         <Button Content="{Binding Snippet.Content}" Command="{Binding Copy}" CommandParameter="{Binding}" Padding="5" Margin="5">
             <Button.Style>
                 <MultiBinding Converter="{StaticResource styleConverter}">
@@ -80,6 +75,26 @@
                 </MultiBinding>
             </Button.Style>
         </Button>
-    </DockPanel>
+        <Grid Margin="10">
+            <Grid.Style>
+                <Style TargetType="Grid">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=IsMouseOver}" Value="True">
+                            <Setter Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+
+                    </Style.Triggers>
+                </Style>
+            </Grid.Style>
+            <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True">
+                <ToolBar Background="DarkGray">
+                    <Button Command="{Binding Delete}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0">
+                        <fa5:FontAwesome Icon="Solid_Trash" />
+                    </Button>
+                </ToolBar>
+            </ToolBarTray>
+        </Grid>
+    </Grid>
 
 </UserControl>
