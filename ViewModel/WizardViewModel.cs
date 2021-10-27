@@ -1,9 +1,7 @@
 ﻿using ClipboardWizard.Model;
 using ClipboardWizard.Service;
-using ClipboardWizard.ViewModel.Command;
 using System;
 using System.Collections.ObjectModel;
-using System.ComponentModel;
 using static WK.Libraries.SharpClipboardNS.SharpClipboard;
 
 namespace ClipboardWizard.ViewModel
@@ -23,6 +21,18 @@ namespace ClipboardWizard.ViewModel
                 .ForEach(vm => Snippets.Add(vm));
 
             App.ClipboardMonitor.ClipboardChanged += ClipboardManager_ClipboardChanged;
+            App.SnippetDeleted += App_SnippetDeleted;
+        }
+
+        private void App_SnippetDeleted(object sender, App.SnippetDeletedEventArgs e)
+        {
+            SnippetViewModel snippetViewModel = e.SnippetViewModel;
+            _ = Snippets.Remove(snippetViewModel);
+
+            if (_activeSnippet == snippetViewModel)
+            {
+                _activeSnippet = null;
+            }
         }
 
         private void ClipboardManager_ClipboardChanged(object sender, ClipboardChangedEventArgs e)

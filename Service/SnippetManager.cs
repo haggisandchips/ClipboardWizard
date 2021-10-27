@@ -1,5 +1,6 @@
 ﻿using ClipboardWizard.Model;
 using SQLite;
+using System;
 using System.Collections.Generic;
 
 namespace ClipboardWizard.Service
@@ -21,6 +22,12 @@ namespace ClipboardWizard.Service
             return connection.Table<Snippet>()
                 .OrderBy(Snippet => Snippet.Id)
                 .ToList();
+        }
+
+        internal static void DeleteSnippet(Snippet snippet)
+        {
+            using SQLiteConnection connection = new(App.databasePath);
+            _ = connection.Delete(snippet);
         }
     }
 }

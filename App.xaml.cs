@@ -1,4 +1,5 @@
-﻿using ClipboardWizard.View;
+﻿using ClipboardWizard.Model;
+using ClipboardWizard.View;
 using System;
 using System.IO;
 using System.Windows;
@@ -20,6 +21,8 @@ namespace ClipboardWizard
 
         public static readonly SharpClipboard ClipboardMonitor = new();
 
+        public static event EventHandler<SnippetDeletedEventArgs> SnippetDeleted;
+
         private void Application_Startup(object sender, StartupEventArgs e)
         {
             InitializeDatabaseFolder();
@@ -35,6 +38,16 @@ namespace ClipboardWizard
             {
                 _ = Directory.CreateDirectory(App.localAppPath);
             }
+        }
+
+        public static void DeleteSnippet(SnippetViewModel snippetViewModel)
+        {
+            SnippetDeleted?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
+        }
+
+        public class SnippetDeletedEventArgs
+        {
+            public SnippetViewModel SnippetViewModel { get; set; }
         }
     }
 }

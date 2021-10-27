@@ -1,4 +1,6 @@
-﻿using ClipboardWizard.ViewModel.Command;
+﻿using ClipboardWizard.Service;
+using ClipboardWizard.ViewModel.Command;
+using System;
 using System.ComponentModel;
 
 namespace ClipboardWizard.Model
@@ -27,9 +29,9 @@ namespace ClipboardWizard.Model
             }
         }
 
-        public CopyCommand Copy {
-            get; 
-        } = new();
+        public CopyCommand Copy { get; } = new();
+
+        public DeleteCommand Delete { get; private set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -37,6 +39,14 @@ namespace ClipboardWizard.Model
         {
             Snippet = snippet;
             State = state;
+
+            Delete = new(this);
+        }
+
+        internal void DeleteSnippet(SnippetViewModel snippetViewModel)
+        {
+            SnippetManager.DeleteSnippet(snippetViewModel.Snippet);
+            App.DeleteSnippet(snippetViewModel);
         }
 
         private void OnPropertyChanged(string propertyName)
