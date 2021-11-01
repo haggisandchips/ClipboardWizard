@@ -45,13 +45,13 @@ namespace ClipboardWizard.ViewModel
             string content = e.Content.ToString();
             if (string.IsNullOrWhiteSpace(content))
             {
-                if (_activeSnippet == null)
+                if (_activeSnippet != null)
                 {
-                    return;
+                    _activeSnippet.State = State.Inactive;
+                    _activeSnippet = null;
                 }
 
-                _activeSnippet.State = State.Inactive;
-                _activeSnippet = null;
+                return;
             }
 
             if (_activeSnippet != null)
