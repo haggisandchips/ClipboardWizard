@@ -10,7 +10,14 @@
              d:DesignHeight="150" d:DesignWidth="200">
 
     <UserControl.Resources>
-        
+
+        <ControlTemplate x:Key="LockedIcon">
+            <fa5:FontAwesome Icon="Solid_Lock" />
+        </ControlTemplate>
+        <ControlTemplate x:Key="UnlockedIcon">
+            <fa5:FontAwesome Icon="Solid_LockOpen" />
+        </ControlTemplate>
+
         <LinearGradientBrush x:Key="activeGradient" StartPoint="0,0" EndPoint="1,1">
             <LinearGradientBrush.GradientStops>
                 <GradientStop Color="#FFE9FBE9" Offset="0"/>
@@ -98,7 +105,18 @@
                 <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True" HorizontalAlignment="Right">
                         <ToolBar Background="DarkGray">
                         <Button Command="{Binding Lock}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0">
-                            <fa5:FontAwesome Icon="Solid_Lock" />
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Locked}" Value="true">
+                                            <Setter Property="Template" Value="{StaticResource LockedIcon}" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Locked}" Value="false">
+                                            <Setter Property="Template" Value="{StaticResource UnlockedIcon}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
                         </Button>
                     </ToolBar>
                 </ToolBarTray>
