@@ -9,24 +9,38 @@ namespace ClipboardWizard.Model
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
-        private string content;
+        private string _content;
         public string Content
         {
-            get => content;
+            get => _content;
             set
             {
-                if (content != null)
+                if (_content != null)
                 {
                     throw new InvalidOperationException("Content cannot be changed once set");
                 }
 
-                content = value;
+                _content = value;
+            }
+        }
+
+        private bool _locked;
+        public bool Locked
+        {
+            get { return _locked; }
+            set {
+                if(_locked)
+                {
+                    throw new InvalidOperationException("Once locked, always locked");
+                }
+
+                _locked = value;
+                OnPropertyChanged(nameof(Locked));
             }
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        // TODO This will be used for tags - not required for content which is effectively immutable
         private void OnPropertyChanged(string propertyName)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

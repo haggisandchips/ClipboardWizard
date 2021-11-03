@@ -87,13 +87,22 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True">
-                <ToolBar Background="DarkGray">
-                    <Button Command="{Binding Delete}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0">
-                        <fa5:FontAwesome Icon="Solid_Trash" />
-                    </Button>
-                </ToolBar>
-            </ToolBarTray>
+            <DockPanel VerticalAlignment="Bottom">
+                <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True">
+                    <ToolBar Background="DarkGray">
+                        <Button Command="{Binding Delete}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0">
+                            <fa5:FontAwesome Icon="Solid_Trash" />
+                        </Button>
+                    </ToolBar>
+                </ToolBarTray>
+                <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True" HorizontalAlignment="Right">
+                        <ToolBar Background="DarkGray">
+                        <Button Command="{Binding Lock}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0">
+                            <fa5:FontAwesome Icon="Solid_Lock" />
+                        </Button>
+                    </ToolBar>
+                </ToolBarTray>
+            </DockPanel>
         </Grid>
     </Grid>
 

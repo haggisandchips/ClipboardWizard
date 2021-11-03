@@ -12,12 +12,12 @@ namespace ClipboardWizard
     /// </summary>
     public partial class App : Application
     {
-        private static string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        private static string applicationName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-        private static string databaseName = "Snippets.db";
+        private static string _folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        private static string _applicationName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+        private static string _databaseName = "Snippets.db";
 
-        public static string localAppPath = Path.Combine(folderPath, applicationName);
-        public static string databasePath = Path.Combine(localAppPath, databaseName);
+        public static string localAppPath = Path.Combine(_folderPath, _applicationName);
+        public static string databasePath = Path.Combine(localAppPath, _databaseName);
 
         public static readonly SharpClipboard ClipboardMonitor = new();
 

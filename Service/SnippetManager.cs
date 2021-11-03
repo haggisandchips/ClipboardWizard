@@ -14,6 +14,13 @@ namespace ClipboardWizard.Service
             _ = connection.Insert(snippet);
         }
 
+        public static void UpdateSnippet(Snippet snippet)
+        {
+            using SQLiteConnection connection = new(App.databasePath);
+            _ = connection.CreateTable<Snippet>();
+            _ = connection.Update(snippet);
+        }
+
         public static List<Snippet> LoadSnippets()
         {
             using SQLiteConnection connection = new(App.databasePath);

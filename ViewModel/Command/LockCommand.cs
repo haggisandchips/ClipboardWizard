@@ -1,18 +1,14 @@
 ﻿using ClipboardWizard.Model;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace ClipboardWizard.ViewModel.Command
 {
-    public class DeleteCommand : ICommand
+    public class LockCommand : ICommand
     {
         private SnippetViewModel _snippetViewModel;
 
-        public DeleteCommand(SnippetViewModel snippetViewModel)
+        public LockCommand(SnippetViewModel snippetViewModel)
         {
             _snippetViewModel = snippetViewModel;
         }
@@ -25,12 +21,12 @@ namespace ClipboardWizard.ViewModel.Command
 
         public bool CanExecute(object parameter)
         {
-            return !_snippetViewModel.Locked;
+            return _snippetViewModel.Locked || !_snippetViewModel.Snippet.Locked;
         }
 
         public void Execute(object parameter)
         {
-            _snippetViewModel.DeleteSnippet();
+            _ = _snippetViewModel.HandleLockAsync();
         }
     }
 }
