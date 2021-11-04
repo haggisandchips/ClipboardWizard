@@ -19,7 +19,7 @@ namespace ClipboardWizard.View
         {
             InitializeComponent();
 
-            _viewModel.Snippets.CollectionChanged += Snippets_CollectionChanged;
+            _viewModel.SnippetViewModels.CollectionChanged += Snippets_CollectionChanged;
         }
 
         private void Snippets_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
@@ -42,7 +42,7 @@ namespace ClipboardWizard.View
 
         private void RecalculateColumns()
         {
-            int columns = Math.Min((int)(SnippetsUniformGrid.ActualWidth / 200), _viewModel.Snippets.Count);
+            int columns = Math.Min((int)(SnippetsUniformGrid.ActualWidth / 200), _viewModel.SnippetViewModels.Count);
 
             SnippetsUniformGrid.Columns = columns > 0 ? columns : 1;
         }

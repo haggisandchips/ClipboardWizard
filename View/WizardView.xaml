@@ -37,7 +37,7 @@
 
     <DockPanel>
         <ScrollViewer DataContext="{StaticResource vm}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
-            <ItemsControl ItemsSource="{Binding Snippets}">
+            <ItemsControl ItemsSource="{Binding SnippetViewModels}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <UniformGrid x:Name="SnippetsUniformGrid"

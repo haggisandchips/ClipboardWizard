@@ -21,7 +21,8 @@ namespace ClipboardWizard
 
         public static readonly SharpClipboard ClipboardMonitor = new();
 
-        public static event EventHandler<SnippetDeletedEventArgs> SnippetDeleted;
+        public static event EventHandler<SnippetChangedEventArgs> SnippetDeleted;
+        public static event EventHandler<SnippetChangedEventArgs> SnippetUpdated;
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -40,12 +41,17 @@ namespace ClipboardWizard
             }
         }
 
+        public static void UpdateSnippet(SnippetViewModel snippetViewModel)
+        {
+            SnippetUpdated?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
+        }
+
         public static void DeleteSnippet(SnippetViewModel snippetViewModel)
         {
             SnippetDeleted?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
         }
 
-        public class SnippetDeletedEventArgs
+        public class SnippetChangedEventArgs
         {
             public SnippetViewModel SnippetViewModel { get; set; }
         }

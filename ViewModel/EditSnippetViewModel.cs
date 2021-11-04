@@ -1,18 +1,14 @@
-﻿using SQLite;
-using System;
+﻿using ClipboardWizard.Model;
 using System.ComponentModel;
 
-namespace ClipboardWizard.Model
+namespace ClipboardWizard.ViewModel
 {
-    public class Snippet : INotifyPropertyChanged
+    public class EditSnippetViewModel : INotifyPropertyChanged
     {
-        [PrimaryKey, AutoIncrement]
-        public int Id { get; set; }
-
         private string _description;
         public string Description
         {
-            get { return _description; }
+            get => _description;
             set
             {
                 _description = value;
@@ -31,23 +27,13 @@ namespace ClipboardWizard.Model
             }
         }
 
-        private bool _locked;
-        public bool Locked
-        {
-            get { return _locked; }
-            set
-            {
-                if (_locked)
-                {
-                    throw new InvalidOperationException("Once locked, always locked");
-                }
-
-                _locked = value;
-                OnPropertyChanged(nameof(Locked));
-            }
-        }
-
         public event PropertyChangedEventHandler PropertyChanged;
+
+        public EditSnippetViewModel(Snippet snippet)
+        {
+            Description = snippet.Description;
+            Content = snippet.Content;
+        }
 
         private void OnPropertyChanged(string propertyName)
         {

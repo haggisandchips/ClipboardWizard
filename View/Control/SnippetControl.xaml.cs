@@ -41,4 +41,19 @@ namespace ClipboardWizard.View.Control
             throw new NotSupportedException();
         }
     }
+
+    internal class ContentConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            Snippet snippet = value as Snippet;
+
+            return string.IsNullOrEmpty(snippet.Description) ? snippet.Content : snippet.Description;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotSupportedException();
+        }
+    }
 }

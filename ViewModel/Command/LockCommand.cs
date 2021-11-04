@@ -26,7 +26,7 @@ namespace ClipboardWizard.ViewModel.Command
 
         public void Execute(object parameter)
         {
-            _ = _snippetViewModel.HandleLockAsync();
+            _snippetViewModel.HandleLock();
         }
     }
 }

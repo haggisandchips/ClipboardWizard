@@ -4,7 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:fa5="http://schemas.fontawesome.com/icons/" 
-             xmlns:model="clr-namespace:ClipboardWizard.Model"
              xmlns:local="clr-namespace:ClipboardWizard.View.Control"
              mc:Ignorable="d" 
              d:DesignHeight="150" d:DesignWidth="200">
@@ -70,10 +69,11 @@
             <Setter Property="Background" Value="{StaticResource inactiveGradient}" />
         </Style>
         <local:StyleConverter x:Key="styleConverter"/>
+        <local:ContentConverter x:Key="contentConverter"/>
     </UserControl.Resources>
     
     <Grid Height="150">
-        <Button Content="{Binding Snippet.Content}" Command="{Binding Copy}" CommandParameter="{Binding}" Padding="5" Margin="5">
+        <Button Content="{Binding Snippet, Converter={StaticResource contentConverter}}" Command="{Binding Copy}" CommandParameter="{Binding}" Padding="5" Margin="5">
             <Button.Style>
                 <MultiBinding Converter="{StaticResource styleConverter}">
                     <Binding Path="State"/>
@@ -90,21 +90,23 @@
                         <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=Grid}, Path=IsMouseOver}" Value="True">
                             <Setter Property="Visibility" Value="Visible" />
                         </DataTrigger>
-
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
             <DockPanel VerticalAlignment="Bottom">
                 <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True">
                     <ToolBar Background="DarkGray">
-                        <Button Command="{Binding Delete}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0">
+                        <Button Command="{Binding Delete}" Background="Transparent" BorderThickness="0">
                             <fa5:FontAwesome Icon="Solid_Trash" />
+                        </Button>
+                        <Button Command="{Binding Edit}" Background="Transparent" BorderThickness="0">
+                            <fa5:FontAwesome Icon="Solid_PencilAlt" />
                         </Button>
                     </ToolBar>
                 </ToolBarTray>
                 <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True" HorizontalAlignment="Right">
                         <ToolBar Background="DarkGray">
-                        <Button Command="{Binding Lock}" CommandParameter="{Binding}" Background="Transparent" BorderThickness="0">
+                        <Button Command="{Binding Lock}" Background="Transparent" BorderThickness="0">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Style.Triggers>

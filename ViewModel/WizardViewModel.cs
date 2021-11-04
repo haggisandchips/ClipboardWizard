@@ -8,31 +8,35 @@ namespace ClipboardWizard.ViewModel
 {
     public class WizardViewModel
     {
-        public ObservableCollection<SnippetViewModel> Snippets { get; set; } = new();
+        public ObservableCollection<SnippetViewModel> SnippetViewModels { get; set; } = new();
 
         public bool Recording { get; set; }
-
-        private SnippetViewModel _activeSnippet;
 
         public WizardViewModel()
         {
             SnippetManager.LoadSnippets()
                 .ConvertAll(snippet => new SnippetViewModel(snippet, State.Inactive))
-                .ForEach(vm => Snippets.Add(vm));
+                .ForEach(vm => SnippetViewModels.Add(vm));
 
             App.ClipboardMonitor.ClipboardChanged += ClipboardManager_ClipboardChanged;
             App.SnippetDeleted += App_SnippetDeleted;
+            App.SnippetUpdated += App_SnippetUpdated;
         }
 
-        private void App_SnippetDeleted(object sender, App.SnippetDeletedEventArgs e)
+        private void App_SnippetDeleted(object sender, App.SnippetChangedEventArgs e)
         {
             SnippetViewModel snippetViewModel = e.SnippetViewModel;
-            _ = Snippets.Remove(snippetViewModel);
+            _ = SnippetViewModels.Remove(snippetViewModel);
+        }
 
-            if (_activeSnippet == snippetViewModel)
-            {
-                _activeSnippet = null;
-            }
+        private void App_SnippetUpdated(object sender, App.SnippetChangedEventArgs e)
+        {
+            SnippetViewModel snippetViewModel = e.SnippetViewModel;
+
+            string content = App.ClipboardMonitor.ClipboardText;
+
+            bool equal = !string.IsNullOrWhiteSpace(content) && snippetViewModel.Snippet.Content.Equals(content, StringComparison.Ordinal);
+            snippetViewModel.State = equal ? State.Active : State.Inactive;
         }
 
         private void ClipboardManager_ClipboardChanged(object sender, ClipboardChangedEventArgs e)
@@ -43,45 +47,24 @@ namespace ClipboardWizard.ViewModel
             }
 
             string content = e.Content.ToString();
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                if (_activeSnippet != null)
-                {
-                    _activeSnippet.State = State.Inactive;
-                    _activeSnippet = null;
-                }
 
-                return;
+            bool nullOrWhitespace = string.IsNullOrWhiteSpace(content);
+            bool matched = false;
+
+            foreach (SnippetViewModel snippetViewModel in SnippetViewModels)
+            {
+                bool equal = !nullOrWhitespace && snippetViewModel.Snippet.Content.Equals(content, StringComparison.Ordinal);
+                snippetViewModel.State = equal ? State.Active : State.Inactive;
+
+                matched |= equal;
             }
 
-            if (_activeSnippet != null)
-            {
-                if (_activeSnippet.Snippet.Content.Equals(content, StringComparison.Ordinal))
-                {
-                    return;
-                }
-
-                _activeSnippet.State = State.Inactive;
-                _activeSnippet = null;
-            }
-
-            foreach (SnippetViewModel snippet in Snippets)
-            {
-                if (snippet.Snippet.Content.Equals(content, StringComparison.Ordinal))
-                {
-                    snippet.State = State.Active;
-                    _activeSnippet = snippet;
-                    break;
-                }
-            }
-
-            if (_activeSnippet == null && Recording)
+            if (!nullOrWhitespace && !matched && Recording)
             {
                 Snippet snippet = new Snippet() { Content = content };
                 SnippetManager.SaveSnippet(snippet);
 
-                _activeSnippet = new(snippet, State.Active);
-                Snippets.Add(_activeSnippet);
+                SnippetViewModels.Add(new(snippet, State.Active));
             }
         }
     }
