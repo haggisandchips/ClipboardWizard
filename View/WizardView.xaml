@@ -5,6 +5,7 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
                  xmlns:vm="clr-namespace:ClipboardWizard.ViewModel"
+                 xmlns:fa5="http://schemas.fontawesome.com/icons/" 
                  xmlns:uc="clr-namespace:ClipboardWizard.View.Control"
                  mc:Ignorable="d"
                  Title="Clipboard Wizard"
@@ -35,8 +36,13 @@
         </mah:WindowCommands>
     </mah:MetroWindow.RightWindowCommands>
 
-    <DockPanel>
-        <ScrollViewer DataContext="{StaticResource vm}" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
+    <DockPanel DataContext="{StaticResource vm}">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
+            <Button Command="{Binding SaveClipboardContents}" Focusable="False">
+                <fa5:FontAwesome Icon="Solid_Plus" />
+            </Button>
+        </StackPanel>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
             <ItemsControl ItemsSource="{Binding SnippetViewModels}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
