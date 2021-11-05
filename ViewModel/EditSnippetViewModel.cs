@@ -29,6 +29,10 @@ namespace ClipboardWizard.ViewModel
 
         public event PropertyChangedEventHandler PropertyChanged;
 
+        public EditSnippetViewModel()
+        {
+        }
+
         public EditSnippetViewModel(Snippet snippet)
         {
             Description = snippet.Description;

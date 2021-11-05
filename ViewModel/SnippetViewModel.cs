@@ -89,9 +89,6 @@ namespace ClipboardWizard.Model
                 Snippet.Content = editSnippetViewModel.Content;
                 SnippetManager.UpdateSnippet(Snippet);
 
-                // TODO What if we have modified this snippet to contain the same content as another snippet?
-                // Could prevent that happening when editing by asking the WizardViewModel?
-
                 if (Snippet.Content.Equals(App.ClipboardMonitor.ClipboardText, StringComparison.Ordinal))
                 {
                     State = State.Active;

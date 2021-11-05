@@ -1,8 +1,10 @@
 ﻿using ClipboardWizard.Model;
 using ClipboardWizard.Service;
+using ClipboardWizard.View;
 using ClipboardWizard.ViewModel.Command;
 using System;
 using System.Collections.ObjectModel;
+using System.Windows;
 using static WK.Libraries.SharpClipboardNS.SharpClipboard;
 
 namespace ClipboardWizard.ViewModel
@@ -27,7 +29,8 @@ namespace ClipboardWizard.ViewModel
             App.SnippetDeleted += App_SnippetDeleted;
             App.SnippetUpdated += App_SnippetUpdated;
 
-            SaveClipboardContents = new SaveClipboardContentsCommand(this);
+            SaveClipboardContents = new(this);
+            AddSnippet = new(this);
         }
 
         private void App_SnippetDeleted(object sender, App.SnippetChangedEventArgs e)
@@ -48,13 +51,41 @@ namespace ClipboardWizard.ViewModel
 
         internal void AddNewSnippet()
         {
-            throw new NotImplementedException();
+            // TODO https://stackoverflow.com/a/40792516/2194201
+            Window owner = Application.Current.MainWindow;
+
+            // TODO Provide button content Update/Save
+            // TODO Update/Save button not enabled if content is null ro whitespace
+            EditSnippetViewModel editSnippetViewModel = new EditSnippetViewModel();
+            EditSnippetView editSnippetView = new()
+            {
+                DataContext = editSnippetViewModel,
+                Owner = owner,
+                Width = Math.Min(owner.ActualWidth * 0.6, 1600),
+                Height = Math.Min(owner.ActualHeight * 0.8, 800)
+            };
+
+            bool? result = editSnippetView.ShowDialog();
+
+            if ((bool)result)
+            {
+                Snippet snippet = new()
+                {
+                    Description = editSnippetViewModel.Description,
+                    Content = editSnippetViewModel.Content
+                };
+
+                SnippetManager.SaveSnippet(snippet);
+                SnippetViewModel snippetViewModel = new SnippetViewModel(snippet, snippet.Content.Equals(App.ClipboardMonitor.ClipboardText, StringComparison.Ordinal) ? State.Active : State.Inactive);
+
+                SnippetViewModels.Add(snippetViewModel);
+            }
         }
 
         internal void SaveSnippet()
         {
             string content = App.ClipboardMonitor.ClipboardText;
-            if(string.IsNullOrWhiteSpace(content))
+            if (string.IsNullOrWhiteSpace(content))
             {
                 return;
             }
