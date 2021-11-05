@@ -15,6 +15,8 @@ namespace ClipboardWizard.ViewModel
 
         public SaveClipboardContentsCommand SaveClipboardContents { get; private set; }
 
+        public AddSnippetCommand AddSnippet { get; private set; }
+
         public WizardViewModel()
         {
             SnippetManager.LoadSnippets()
@@ -42,6 +44,11 @@ namespace ClipboardWizard.ViewModel
 
             bool equal = !string.IsNullOrWhiteSpace(content) && snippetViewModel.Snippet.Content.Equals(content, StringComparison.Ordinal);
             snippetViewModel.State = equal ? State.Active : State.Inactive;
+        }
+
+        internal void AddNewSnippet()
+        {
+            throw new NotImplementedException();
         }
 
         internal void SaveSnippet()

@@ -37,11 +37,16 @@
     </mah:MetroWindow.RightWindowCommands>
 
     <DockPanel DataContext="{StaticResource vm}">
-        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="5">
-            <Button Command="{Binding SaveClipboardContents}" Focusable="False">
-                <fa5:FontAwesome Icon="Solid_Plus" />
-            </Button>
-        </StackPanel>
+        <DockPanel DockPanel.Dock="Bottom" Margin="5">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                <Button Command="{Binding SaveClipboardContents}" Focusable="False">
+                    <fa5:FontAwesome Icon="Solid_Plus" />
+                </Button>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <Button Command="{Binding AddSnippet}" Focusable="False" Content="New"></Button>
+            </StackPanel>
+        </DockPanel>
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
             <ItemsControl ItemsSource="{Binding SnippetViewModels}">
                 <ItemsControl.ItemsPanel>
