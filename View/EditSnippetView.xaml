@@ -10,24 +10,25 @@
         MaxWidth="1600"
         WindowStartupLocation="CenterOwner"
         d:DesignWidth="600"
-        d:DesignHeight="400" ShowInTaskbar="False" WindowStyle="ToolWindow">
+        d:DesignHeight="400" ShowInTaskbar="False" WindowStyle="ToolWindow" Activated="Window_Activated">
 
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Top" Margin="0 0 0 10">
             <Label Content="Description" />
-            <TextBox Text="{Binding Description, Mode=TwoWay}" />
+            <TextBox Text="{Binding Description, Mode=TwoWay}" TabIndex="1" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Update" Click="Update_Click" Margin="5" />
-            <Button Content="Cancel" Click="Cancel_Click" Margin="5" />
+            <Button Content="Update" Click="Update_Click" Margin="5" TabIndex="3" />
+            <Button Content="Cancel" Click="Cancel_Click" Margin="5" TabIndex="4" />
         </StackPanel>
         <DockPanel>
             <Label DockPanel.Dock="Top" Content="Content" />
-            <TextBox Text="{Binding Content, Mode=TwoWay}"
+            <TextBox x:Name="ContentTextBox"
+                     Text="{Binding Content, Mode=TwoWay}"
                      AcceptsReturn="True"
                      AcceptsTab="True"
                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                     ScrollViewer.VerticalScrollBarVisibility="Auto" TabIndex="2" />
         </DockPanel>
     </DockPanel>
 </mah:MetroWindow>

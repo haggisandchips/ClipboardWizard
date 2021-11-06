@@ -23,5 +23,10 @@ namespace ClipboardWizard.View
             DialogResult = false;
             Close();
         }
+
+        private void Window_Activated(object sender, System.EventArgs e)
+        {
+            ContentTextBox.Focus();
+        }
     }
 }
