@@ -9,6 +9,16 @@ namespace ClipboardWizard.Model
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
+        private int _order;
+        public int Order
+        {
+            get { return _order; }
+            set {
+                _order = value;
+                OnPropertyChanged(nameof(Order));
+            }
+        }
+
         private string _description;
         public string Description
         {

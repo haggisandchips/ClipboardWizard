@@ -27,7 +27,7 @@ namespace ClipboardWizard.Service
             _ = connection.CreateTable<Snippet>();
 
             return connection.Table<Snippet>()
-                .OrderBy(Snippet => Snippet.Id)
+                .OrderBy(Snippet => Snippet.Order)
                 .ToList();
         }
 

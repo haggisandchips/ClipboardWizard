@@ -4,6 +4,7 @@ using ClipboardWizard.View;
 using ClipboardWizard.ViewModel.Command;
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using static WK.Libraries.SharpClipboardNS.SharpClipboard;
 
@@ -72,7 +73,8 @@ namespace ClipboardWizard.ViewModel
                 Snippet snippet = new()
                 {
                     Description = editSnippetViewModel.Description,
-                    Content = editSnippetViewModel.Content
+                    Content = editSnippetViewModel.Content,
+                    Order = GetNextOrder()
                 };
 
                 SnippetManager.SaveSnippet(snippet);
@@ -90,7 +92,10 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            Snippet snippet = new Snippet() { Content = content };
+            Snippet snippet = new Snippet() {
+                Content = content,
+                Order = GetNextOrder()
+            };
             SnippetManager.SaveSnippet(snippet);
 
             SnippetViewModels.Add(new(snippet, State.Active));
@@ -118,11 +123,22 @@ namespace ClipboardWizard.ViewModel
 
             if (!nullOrWhitespace && !matched && Recording)
             {
-                Snippet snippet = new Snippet() { Content = content };
+                Snippet snippet = new Snippet() {
+                    Content = content,
+                    Order = GetNextOrder()
+                };
                 SnippetManager.SaveSnippet(snippet);
 
                 SnippetViewModels.Add(new(snippet, State.Active));
             }
+        }
+
+        private int GetNextOrder()
+        {
+            SnippetViewModel lastSnippetViewModel = SnippetViewModels.LastOrDefault();
+            int order = lastSnippetViewModel == null ? 0 : lastSnippetViewModel.Snippet.Order;
+
+            return order + 1;
         }
     }
 }
