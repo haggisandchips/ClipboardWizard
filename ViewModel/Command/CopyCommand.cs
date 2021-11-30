@@ -20,7 +20,7 @@ namespace ClipboardWizard.ViewModel.Command
 
         public void Execute(object parameter)
         {
-            Clipboard.SetText((parameter as SnippetViewModel).Snippet.Content);
+            Clipboard.SetDataObject((parameter as SnippetViewModel).Snippet.Content);
         }
     }
 }
