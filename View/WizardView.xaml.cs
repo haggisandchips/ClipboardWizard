@@ -1,8 +1,11 @@
-﻿using ClipboardWizard.ViewModel;
+﻿using ClipboardWizard.View.Control;
+using ClipboardWizard.ViewModel;
 using System;
 using System.Collections.Specialized;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 
 namespace ClipboardWizard.View
 {
@@ -45,6 +48,20 @@ namespace ClipboardWizard.View
             int columns = Math.Min((int)(SnippetsUniformGrid.ActualWidth / 200), _viewModel.SnippetViewModels.Count);
 
             SnippetsUniformGrid.Columns = columns > 0 ? columns : 1;
+        }
+
+        private void SnippetControl_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                SnippetControl control = sender as SnippetControl;
+                _ = DragDrop.DoDragDrop(control, new DataObject(control), DragDropEffects.Move);
+            }
+        }
+
+        private void ScrollViewer_Drop(object sender, DragEventArgs e)
+        {
+
         }
     }
 }

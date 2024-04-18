@@ -47,7 +47,7 @@
                 <Button Command="{Binding AddSnippet}" Focusable="False" Content="New"></Button>
             </StackPanel>
         </DockPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" AllowDrop="True" Drop="ScrollViewer_Drop" >
             <ItemsControl ItemsSource="{Binding SnippetViewModels}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -58,7 +58,7 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <uc:SnippetControl />
+                        <uc:SnippetControl PreviewMouseMove="SnippetControl_PreviewMouseMove" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
