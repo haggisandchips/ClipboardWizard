@@ -49,19 +49,5 @@ namespace ClipboardWizard.View
 
             SnippetsUniformGrid.Columns = columns > 0 ? columns : 1;
         }
-
-        private void SnippetControl_PreviewMouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                SnippetControl control = sender as SnippetControl;
-                _ = DragDrop.DoDragDrop(control, new DataObject(control), DragDropEffects.Move);
-            }
-        }
-
-        private void ScrollViewer_Drop(object sender, DragEventArgs e)
-        {
-
-        }
     }
 }
