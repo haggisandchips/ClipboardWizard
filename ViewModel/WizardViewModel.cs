@@ -26,6 +26,12 @@ namespace ClipboardWizard.ViewModel
                 .ConvertAll(snippet => new SnippetViewModel(snippet, State.Inactive))
                 .ForEach(vm => SnippetViewModels.Add(vm));
 
+            if (SnippetViewModels.Count > 0)
+            {
+                SnippetViewModels.First().First = true;
+                SnippetViewModels.Last().Last = true;
+            }
+
             App.ClipboardMonitor.ClipboardChanged += ClipboardManager_ClipboardChanged;
             App.SnippetDeleted += App_SnippetDeleted;
             App.SnippetUpdated += App_SnippetUpdated;
@@ -54,13 +60,11 @@ namespace ClipboardWizard.ViewModel
 
         private void App_OrderSnippetHigher(object sender, App.SnippetChangedEventArgs e)
         {
-            // TODO Disable higher for first snippet
             Reorder(e.SnippetViewModel, -1);
         }
 
         private void App_OrderSnippetLower(object sender, App.SnippetChangedEventArgs e)
         {
-            // TODO Disable lower for last snippet
             Reorder(e.SnippetViewModel, +1);
         }
 
@@ -74,6 +78,8 @@ namespace ClipboardWizard.ViewModel
             SnippetViewModels[otherIndex] = snippetViewModel;
 
             (snippetViewModel.Snippet.Order, otherSnippetViewModel.Snippet.Order) = (otherSnippetViewModel.Snippet.Order, snippetViewModel.Snippet.Order);
+            (snippetViewModel.First, otherSnippetViewModel.First) = (otherSnippetViewModel.First, snippetViewModel.First);
+            (snippetViewModel.Last, otherSnippetViewModel.Last) = (otherSnippetViewModel.Last, snippetViewModel.Last);
         }
 
         internal void AddNewSnippet()

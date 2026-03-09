@@ -21,7 +21,7 @@ namespace ClipboardWizard.ViewModel.Command
 
         public bool CanExecute(object parameter)
         {
-            return true;
+            return !_snippetViewModel.Last;
         }
 
         public void Execute(object parameter)

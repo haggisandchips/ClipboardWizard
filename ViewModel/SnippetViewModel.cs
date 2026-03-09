@@ -46,6 +46,28 @@ namespace ClipboardWizard.Model
             }
         }
 
+        private bool _first = false;
+        public bool First
+        {
+            get => _first;
+            set
+            {
+                _first = value;
+                OnPropertyChanged(nameof(First));
+            }
+        }
+
+        private bool _last = false;
+        public bool Last
+        {
+            get => _last;
+            set
+            {
+                _last = value;
+                OnPropertyChanged(nameof(Last));
+            }
+        }
+
         public CopyCommand Copy { get; } = new();
 
         public DeleteCommand Delete { get; private set; }
