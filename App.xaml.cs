@@ -23,6 +23,8 @@ namespace ClipboardWizard
 
         public static event EventHandler<SnippetChangedEventArgs> SnippetDeleted;
         public static event EventHandler<SnippetChangedEventArgs> SnippetUpdated;
+        public static event EventHandler<SnippetChangedEventArgs> OrderSnippetHigher;
+        public static event EventHandler<SnippetChangedEventArgs> OrderSnippetLower;
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
@@ -49,6 +51,16 @@ namespace ClipboardWizard
         public static void DeleteSnippet(SnippetViewModel snippetViewModel)
         {
             SnippetDeleted?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
+        }
+
+        public static void OrderHigher(SnippetViewModel snippetViewModel)
+        {
+            OrderSnippetHigher?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
+        }
+
+        public static void OrderLower(SnippetViewModel snippetViewModel)
+        {
+            OrderSnippetLower?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
         }
 
         public class SnippetChangedEventArgs

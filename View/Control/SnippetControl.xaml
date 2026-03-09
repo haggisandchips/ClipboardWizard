@@ -102,6 +102,12 @@
                         <Button Command="{Binding Edit}" Background="Transparent" BorderThickness="0">
                             <fa5:FontAwesome Icon="Solid_PencilAlt" />
                         </Button>
+                        <Button Command="{Binding OrderHigher}" Background="Transparent" BorderThickness="0">
+                            <fa5:FontAwesome Icon="Solid_ArrowUp" />
+                        </Button>
+                        <Button Command="{Binding OrderLower}" Background="Transparent" BorderThickness="0">
+                            <fa5:FontAwesome Icon="Solid_ArrowDown" />
+                        </Button>
                     </ToolBar>
                 </ToolBarTray>
                 <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True" HorizontalAlignment="Right">

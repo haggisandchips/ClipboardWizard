@@ -29,6 +29,8 @@ namespace ClipboardWizard.ViewModel
             App.ClipboardMonitor.ClipboardChanged += ClipboardManager_ClipboardChanged;
             App.SnippetDeleted += App_SnippetDeleted;
             App.SnippetUpdated += App_SnippetUpdated;
+            App.OrderSnippetHigher += App_OrderSnippetHigher;
+            App.OrderSnippetLower += App_OrderSnippetLower;
 
             SaveClipboardContents = new(this);
             AddSnippet = new(this);
@@ -48,6 +50,30 @@ namespace ClipboardWizard.ViewModel
 
             bool equal = !string.IsNullOrWhiteSpace(content) && snippetViewModel.Snippet.Content.Equals(content, StringComparison.Ordinal);
             snippetViewModel.State = equal ? State.Active : State.Inactive;
+        }
+
+        private void App_OrderSnippetHigher(object sender, App.SnippetChangedEventArgs e)
+        {
+            // TODO Disable higher for first snippet
+            Reorder(e.SnippetViewModel, -1);
+        }
+
+        private void App_OrderSnippetLower(object sender, App.SnippetChangedEventArgs e)
+        {
+            // TODO Disable lower for last snippet
+            Reorder(e.SnippetViewModel, +1);
+        }
+
+        private void Reorder(SnippetViewModel snippetViewModel, int indexOffset)
+        {
+            int currentIndex = SnippetViewModels.IndexOf(snippetViewModel);
+            int otherIndex = currentIndex + indexOffset;
+            SnippetViewModel otherSnippetViewModel = SnippetViewModels[otherIndex];
+
+            SnippetViewModels[currentIndex] = otherSnippetViewModel;
+            SnippetViewModels[otherIndex] = snippetViewModel;
+
+            (snippetViewModel.Snippet.Order, otherSnippetViewModel.Snippet.Order) = (otherSnippetViewModel.Snippet.Order, snippetViewModel.Snippet.Order);
         }
 
         internal void AddNewSnippet()

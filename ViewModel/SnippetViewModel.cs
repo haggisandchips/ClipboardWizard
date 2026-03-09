@@ -54,6 +54,10 @@ namespace ClipboardWizard.Model
 
         public EditCommand Edit { get; private set; }
 
+        public OrderHigherCommand OrderHigher { get; private set; }
+
+        public OrderLowerCommand OrderLower { get; private set; }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public SnippetViewModel(Snippet snippet, State state)
@@ -63,8 +67,16 @@ namespace ClipboardWizard.Model
             Locked = snippet.Locked;
 
             Delete = new(this);
-            Lock = new(this);
             Edit = new(this);
+            OrderHigher = new(this);
+            OrderLower = new(this);
+            Lock = new(this);
+        }
+
+        internal void DeleteSnippet()
+        {
+            SnippetManager.DeleteSnippet(Snippet);
+            App.DeleteSnippet(this);
         }
 
         internal void EditSnippet()
@@ -102,10 +114,15 @@ namespace ClipboardWizard.Model
             }
         }
 
-        internal void DeleteSnippet()
+        internal void OrderSnippetHigher()
         {
-            SnippetManager.DeleteSnippet(Snippet);
-            App.DeleteSnippet(this);
+            SnippetManager.OrderHigher(Snippet);
+            App.OrderHigher(this);
+        }
+
+        internal void OrderSnippetLower() {
+            SnippetManager.OrderLower(Snippet);
+            App.OrderLower(this);
         }
 
         internal void HandleLock()
