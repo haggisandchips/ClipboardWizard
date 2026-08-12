@@ -18,6 +18,16 @@ namespace ClipboardWizard.Service
             return stream.ToArray();
         }
 
+        public static byte[] EncodePng(BitmapSource image)
+        {
+            PngBitmapEncoder encoder = new();
+            encoder.Frames.Add(BitmapFrame.Create(image));
+
+            using MemoryStream stream = new();
+            encoder.Save(stream);
+            return stream.ToArray();
+        }
+
         public static BitmapImage DecodeToBitmapImage(byte[] pngData)
         {
             if (pngData == null || pngData.Length == 0)

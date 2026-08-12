@@ -1,5 +1,8 @@
 using System;
 using System.Drawing;
+using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Media.Imaging;
 using WK.Libraries.SharpClipboardNS;
 
 namespace ClipboardWizard.Service
@@ -21,20 +24,42 @@ namespace ClipboardWizard.Service
             _clipboard.ClipboardChanged += OnClipboardChanged;
         }
 
+        /// <summary>
+        /// Queries the OS clipboard directly rather than SharpClipboard's ClipboardText/
+        /// ClipboardImage properties - those turned out to be last-seen-per-format caches,
+        /// not live state, so ClipboardText kept reporting stale text after copying an image
+        /// over it. Image is checked first: a plain "copy image" action is what this exists
+        /// to fix, and apps that copy both rarely mean for the text to win.
+        /// </summary>
         public ClipboardContent CurrentContent
         {
             get
             {
-                string text = _clipboard.ClipboardText;
-                if (!string.IsNullOrWhiteSpace(text))
+                try
                 {
-                    return new ClipboardContent { Type = ClipboardContentType.Text, Text = text };
-                }
+                    if (Clipboard.ContainsImage())
+                    {
+                        BitmapSource image = Clipboard.GetImage();
+                        if (image != null)
+                        {
+                            return new ClipboardContent { Type = ClipboardContentType.Image, ImageData = ImageCodec.EncodePng(image) };
+                        }
+                    }
 
-                Image image = _clipboard.ClipboardImage;
-                if (image != null)
+                    if (Clipboard.ContainsText())
+                    {
+                        string text = Clipboard.GetText();
+                        if (!string.IsNullOrWhiteSpace(text))
+                        {
+                            return new ClipboardContent { Type = ClipboardContentType.Text, Text = text };
+                        }
+                    }
+                }
+                catch (COMException)
                 {
-                    return new ClipboardContent { Type = ClipboardContentType.Image, ImageData = ImageCodec.EncodePng(image) };
+                    // The clipboard is a shared OS resource that can be transiently locked by
+                    // another process. This getter backs CanExecute checks, which must never
+                    // throw, so treat that the same as "nothing available right now".
                 }
 
                 return null;
