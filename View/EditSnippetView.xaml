@@ -32,7 +32,7 @@
             <Label DockPanel.Dock="Top" Content="Content" />
             <Grid>
                 <TextBox x:Name="ContentTextBox"
-                         Text="{Binding Content, Mode=TwoWay}"
+                         Text="{Binding Content, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          AcceptsReturn="True"
                          AcceptsTab="True"
                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
