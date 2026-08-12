@@ -5,8 +5,8 @@ Guidance for working in this repository.
 ## What this is
 
 A Windows desktop (WPF, .NET 8) clipboard manager. It watches the system
-clipboard, lets the user pin text snippets to a persistent list, and re-copy
-them later. See [SPEC.md](SPEC.md) for functional behaviour.
+clipboard, lets the user pin text and image snippets to a persistent list,
+and re-copy them later. See [SPEC.md](SPEC.md) for functional behaviour.
 
 ## Build, run, test
 
@@ -27,13 +27,16 @@ into the main build.
 MVVM, composed by hand in `App.xaml.cs` (no DI container — the object graph
 is small enough not to need one):
 
-- **Model** (`Model/`) — `Snippet` (SQLite-mapped) and `State` (Active/Inactive,
-  whether a snippet matches the current clipboard contents).
+- **Model** (`Model/`) — `Snippet` (SQLite-mapped; `Type` selects whether
+  `Content` (text) or `ImageData` (PNG bytes) is the live payload) and
+  `State` (Active/Inactive, whether a snippet matches the current clipboard
+  contents).
 - **Service** (`Service/`) — `ISnippetRepository`/`SnippetRepository` (async
   SQLite persistence, one reused connection), `IClipboardMonitor`/
   `SharpClipboardMonitor` (wraps the third-party SharpClipboard so the rest
-  of the app depends on our own interface instead), `Logger` (best-effort
-  file logging).
+  of the app depends on our own interface, and our own `ClipboardContent`
+  type, instead), `ImageCodec` (the one place that knows snippet images are
+  PNG-encoded), `Logger` (best-effort file logging).
 - **ViewModel** (`ViewModel/`) — `WizardViewModel` owns the snippet
   collection and implements `ISnippetHost`, the interface each
   `SnippetViewModel` uses to ask its owner to persist, remove, or reorder it.
@@ -62,11 +65,21 @@ unhandled exception in async void would otherwise crash the app silently.
 - `InternalsVisibleTo` exposes `internal` ViewModel members to the test
   project so async command-backing methods can be awaited directly in
   tests, instead of trying to await `ICommand.Execute`'s `async void`.
+- Clipboard/snippet matching for "is this Active" and "should this be
+  auto-recorded" is centralized in `WizardViewModel.Matches`/`IsSaveable`
+  rather than duplicated per content type — extend those, don't add a
+  parallel comparison path, if a third content type is ever added.
+- `SnippetRepository` relies on sqlite-net-pcl adding missing columns via
+  `ALTER TABLE` on `CreateTableAsync`, so adding a new `Snippet` property is
+  schema-compatible with existing databases for free — no migration code
+  needed, but do add a test like
+  `SnippetRepositoryMigrationTests` for new columns that need a specific
+  default for pre-existing rows (int/bool default to `0`/`false`, which
+  isn't always the right value).
 
 ## Planned work
 
 Not yet implemented — see [SPEC.md](SPEC.md#planned) before making
-structural decisions that would make these harder to add later:
+structural decisions that would make it harder to add later:
 
-- Image snippets (not just text)
 - Organizing snippets into categories
