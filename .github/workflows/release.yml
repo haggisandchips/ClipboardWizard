@@ -1,0 +1,86 @@
+name: Release
+
+# Building and packaging a Velopack release, published to GitHub Releases,
+# whenever a version tag (e.g. v1.2.3) is pushed.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_VERSION: "8.0.x"
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Determine version from tag
+        id: version
+        shell: bash
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag#v}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: |
+            ClipboardWizard.csproj
+            ClipboardWizard.Tests/ClipboardWizard.Tests.csproj
+
+      - name: Install vpk
+        run: |
+          dotnet tool install -g vpk
+          "$env:USERPROFILE\.dotnet\tools" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Build and test
+        run: |
+          dotnet build ClipboardWizard.sln -c Release -p:Version=${{ steps.version.outputs.version }}
+          dotnet test ClipboardWizard.Tests/ClipboardWizard.Tests.csproj -c Release --no-build
+
+      - name: Publish self-contained app
+        run: >
+          dotnet publish ClipboardWizard.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:Version=${{ steps.version.outputs.version }}
+          -o publish
+
+      - name: Pack Velopack release
+        run: >
+          vpk pack
+          --packId ClipboardWizard
+          --packVersion ${{ steps.version.outputs.version }}
+          --packDir publish
+          --mainExe ClipboardWizard.exe
+          --outputDir release
+          --packTitle "Clipboard Wizard"
+          --packAuthors "Ivor Potter"
+          --icon witch-hat-white.ico
+
+      - name: Upload packaged release as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: velopack-release-${{ steps.version.outputs.version }}
+          path: release/
+
+      - name: Publish release to GitHub
+        run: >
+          vpk upload github
+          --repoUrl ${{ github.server_url }}/${{ github.repository }}
+          --token ${{ secrets.GITHUB_TOKEN }}
+          --tag ${{ steps.version.outputs.tag }}
+          --outputDir release
+          --publish

@@ -4,6 +4,8 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
     <ApplicationIcon>witch-hat-white.ico</ApplicationIcon>
+    <!-- Overridden by CI (-p:Version=) from the release tag; this is just the local-dev default. -->
+    <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="witch-hat-white.ico" />
@@ -25,6 +27,7 @@
     <PackageReference Include="MahApps.Metro" Version="2.4.9" />
     <PackageReference Include="SharpClipboard" Version="3.5.2" />
     <PackageReference Include="sqlite-net-pcl" Version="1.8.116" />
+    <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
     <Resource Include="witch-hat-white.ico" />

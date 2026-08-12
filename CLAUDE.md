@@ -22,6 +22,36 @@ explicit `<Compile Remove>` — if you add a third project under this root,
 give it the same treatment or the default SDK globs will pull its files
 into the main build.
 
+## Releasing
+
+Releases are packaged with [Velopack](https://velopack.io) and published to
+GitHub Releases. Pushing a tag matching `v*` (e.g. `v1.2.3`) triggers
+`.github/workflows/release.yml`, which builds, tests, publishes a
+self-contained `win-x64` build, packs it with `vpk`, and uploads the result
+(installer, portable zip, delta feed) to a GitHub Release tied to that tag —
+no manual steps beyond pushing the tag.
+
+To do the same locally (e.g. to test a packaging change before tagging):
+
+```
+dotnet tool install -g vpk
+dotnet publish ClipboardWizard.csproj -c Release -r win-x64 --self-contained true -p:Version=0.1.0 -o publish
+vpk pack --packId ClipboardWizard --packVersion 0.1.0 --packDir publish --mainExe ClipboardWizard.exe --outputDir release --packTitle "Clipboard Wizard" --packAuthors "Ivor Potter" --icon witch-hat-white.ico
+```
+
+`vpk pack` prints a warning that `VelopackApp.Run()` "does not look like
+your application's entry point" — expected and harmless for WPF, which has
+no conventional `Main()` to hook; the call in `App`'s constructor (before
+`InitializeComponent()`, i.e. as early as this app can intercept) is the
+documented pattern for WPF apps and does still work correctly.
+
+In-app, `App.CheckForUpdatesAsync` checks GitHub Releases for a newer
+version on startup (fire-and-forget, never blocks startup) via
+`Velopack.Sources.GithubSource` pointed at this repo, and no-ops entirely
+(`UpdateManager.IsInstalled == false`) when running from a plain `dotnet
+build`/`publish` rather than an installed copy — so it's safe to leave
+running while developing.
+
 ## Architecture
 
 MVVM, composed by hand in `App.xaml.cs` (no DI container — the object graph

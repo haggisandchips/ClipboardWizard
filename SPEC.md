@@ -69,6 +69,13 @@ over a dark image thumbnail.
 `%LocalAppData%\ClipboardWizard\Snippets.db`. All changes are persisted
 immediately; there is no explicit save step.
 
+**Updates.** On every startup, an installed copy checks GitHub Releases in
+the background for a newer version. If one is found it's downloaded
+automatically, then the user is asked whether to restart immediately to
+apply it; declining just defers the (already-downloaded) update to the next
+normal restart. This never blocks or delays startup, and does nothing at
+all when running a non-installed (development) build.
+
 ## Non-goals (current version)
 
 - No sync across machines.
