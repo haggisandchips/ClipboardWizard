@@ -1,17 +1,19 @@
 using System;
+using System.Drawing;
 using WK.Libraries.SharpClipboardNS;
 
 namespace ClipboardWizard.Service
 {
     /// <summary>
     /// Adapts the third-party SharpClipboard monitor to IClipboardMonitor so the rest of the
-    /// app only depends on our own, easily-fakeable abstraction.
+    /// app only depends on our own, easily-fakeable abstraction, and only knows about the
+    /// content types we actually support (text, image) rather than SharpClipboard's full set.
     /// </summary>
     public class SharpClipboardMonitor : IClipboardMonitor, IDisposable
     {
         private readonly SharpClipboard _clipboard;
 
-        public event EventHandler<string> TextCopied;
+        public event EventHandler<ClipboardContent> ContentCopied;
 
         public SharpClipboardMonitor(SharpClipboard clipboard)
         {
@@ -19,16 +21,47 @@ namespace ClipboardWizard.Service
             _clipboard.ClipboardChanged += OnClipboardChanged;
         }
 
-        public string CurrentText => _clipboard.ClipboardText;
+        public ClipboardContent CurrentContent
+        {
+            get
+            {
+                string text = _clipboard.ClipboardText;
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    return new ClipboardContent { Type = ClipboardContentType.Text, Text = text };
+                }
+
+                Image image = _clipboard.ClipboardImage;
+                if (image != null)
+                {
+                    return new ClipboardContent { Type = ClipboardContentType.Image, ImageData = ImageCodec.EncodePng(image) };
+                }
+
+                return null;
+            }
+        }
 
         private void OnClipboardChanged(object sender, SharpClipboard.ClipboardChangedEventArgs e)
         {
-            if (e.ContentType != SharpClipboard.ContentTypes.Text)
+            ClipboardContent content = e.ContentType switch
             {
-                return;
-            }
+                SharpClipboard.ContentTypes.Text => new ClipboardContent
+                {
+                    Type = ClipboardContentType.Text,
+                    Text = e.Content?.ToString() ?? string.Empty
+                },
+                SharpClipboard.ContentTypes.Image when e.Content is Image image => new ClipboardContent
+                {
+                    Type = ClipboardContentType.Image,
+                    ImageData = ImageCodec.EncodePng(image)
+                },
+                _ => null
+            };
 
-            TextCopied?.Invoke(this, e.Content?.ToString() ?? string.Empty);
+            if (content != null)
+            {
+                ContentCopied?.Invoke(this, content);
+            }
         }
 
         public void Dispose()

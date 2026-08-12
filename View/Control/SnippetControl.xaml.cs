@@ -1,4 +1,5 @@
 ﻿using ClipboardWizard.Model;
+using ClipboardWizard.Service;
 using System;
 using System.Globalization;
 using System.Windows;
@@ -46,12 +47,25 @@ namespace ClipboardWizard.View.Control
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not Snippet snippet)
+            if (value is not Snippet snippet || snippet.Type != SnippetType.Text)
             {
                 return string.Empty;
             }
 
             return string.IsNullOrEmpty(snippet.Description) ? snippet.Content : snippet.Description;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    internal class ImageBytesConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return value is byte[] bytes ? ImageCodec.DecodeToBitmapImage(bytes) : null;
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

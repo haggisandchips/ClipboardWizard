@@ -77,6 +77,20 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task EditSnippetAsync_ForImageSnippet_IsANoOp()
+        {
+            // EditCommand.CanExecute already blocks this from the UI; this checks the
+            // belt-and-braces guard inside SnippetViewModel itself.
+            FakeSnippetHost host = new();
+            Snippet snippet = new() { Type = SnippetType.Image, ImageData = [1, 2, 3] };
+            SnippetViewModel viewModel = new(snippet, State.Inactive, host);
+
+            await viewModel.EditSnippetAsync();
+
+            Assert.Empty(host.UpdatedSnippets);
+        }
+
+        [Fact]
         public async Task HandleLockAsync_ReProtectsAutomaticallyAfterTheUnlockWindow()
         {
             FakeSnippetHost host = new();

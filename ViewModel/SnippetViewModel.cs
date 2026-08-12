@@ -110,6 +110,14 @@ namespace ClipboardWizard.ViewModel
 
         internal async Task EditSnippetAsync()
         {
+            // Defense in depth: EditCommand.CanExecute already blocks this from the UI, but
+            // there's no sensible way to edit an image's pixels in a text box, so refuse it
+            // here too rather than trusting the command binding alone.
+            if (Snippet.Type != SnippetType.Text)
+            {
+                return;
+            }
+
             // The owner must be set before ShowDialog so the dialog centers over it and
             // stays modal to the correct window.
             Window owner = Application.Current.MainWindow;

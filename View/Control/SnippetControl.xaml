@@ -70,10 +70,11 @@
         </Style>
         <local:StyleConverter x:Key="styleConverter"/>
         <local:ContentConverter x:Key="contentConverter"/>
+        <local:ImageBytesConverter x:Key="imageConverter"/>
     </UserControl.Resources>
-    
+
     <Grid Height="150">
-        <Button Content="{Binding Snippet, Converter={StaticResource contentConverter}}" Command="{Binding Copy}" CommandParameter="{Binding}" Padding="5" Margin="5">
+        <Button Content="{Binding}" Command="{Binding Copy}" CommandParameter="{Binding}" Padding="5" Margin="5">
             <Button.Style>
                 <MultiBinding Converter="{StaticResource styleConverter}">
                     <Binding Path="State"/>
@@ -81,6 +82,36 @@
                     <Binding Source="{StaticResource inactiveStyle}" />
                 </MultiBinding>
             </Button.Style>
+            <Button.ContentTemplate>
+                <DataTemplate>
+                    <Grid>
+                        <TextBlock Text="{Binding Snippet, Converter={StaticResource contentConverter}}"
+                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Snippet.Type}" Value="Image">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <Image Source="{Binding Snippet.ImageData, Converter={StaticResource imageConverter}}" Stretch="Uniform">
+                            <Image.Style>
+                                <Style TargetType="Image">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Snippet.Type}" Value="Image">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Image.Style>
+                        </Image>
+                    </Grid>
+                </DataTemplate>
+            </Button.ContentTemplate>
         </Button>
         <Grid Margin="10">
             <Grid.Style>

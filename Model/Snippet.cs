@@ -29,7 +29,26 @@ namespace ClipboardWizard.Model
             }
         }
 
+        private SnippetType _type;
+
+        /// <summary>
+        /// Which of Content/ImageData holds this snippet's payload. Existing rows created
+        /// before this column existed default to 0 (Text), which is correct for them since
+        /// only text snippets existed at the time.
+        /// </summary>
+        public SnippetType Type
+        {
+            get => _type;
+            set
+            {
+                _type = value;
+                OnPropertyChanged(nameof(Type));
+            }
+        }
+
         private string _content;
+
+        /// <summary>Text payload. Only meaningful when Type is Text.</summary>
         public string Content
         {
             get => _content;
@@ -37,6 +56,19 @@ namespace ClipboardWizard.Model
             {
                 _content = value;
                 OnPropertyChanged(nameof(Content));
+            }
+        }
+
+        private byte[] _imageData;
+
+        /// <summary>PNG-encoded image payload. Only meaningful when Type is Image.</summary>
+        public byte[] ImageData
+        {
+            get => _imageData;
+            set
+            {
+                _imageData = value;
+                OnPropertyChanged(nameof(ImageData));
             }
         }
 

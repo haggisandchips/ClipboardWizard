@@ -1,9 +1,11 @@
+using ClipboardWizard.Model;
 using ClipboardWizard.Service;
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace ClipboardWizard.ViewModel.Command
 {
@@ -32,19 +34,35 @@ namespace ClipboardWizard.ViewModel.Command
             // vast majority of these without bothering the user.
             try
             {
-                Clipboard.SetDataObject(snippetViewModel.Snippet.Content);
+                SetClipboard(snippetViewModel.Snippet);
             }
             catch (COMException)
             {
                 try
                 {
                     Thread.Sleep(100);
-                    Clipboard.SetDataObject(snippetViewModel.Snippet.Content);
+                    SetClipboard(snippetViewModel.Snippet);
                 }
                 catch (COMException ex)
                 {
                     CommandErrorHandler.Handle(nameof(CopyCommand), ex);
                 }
+            }
+        }
+
+        private static void SetClipboard(Snippet snippet)
+        {
+            if (snippet.Type == SnippetType.Image)
+            {
+                BitmapImage image = ImageCodec.DecodeToBitmapImage(snippet.ImageData);
+                if (image != null)
+                {
+                    Clipboard.SetImage(image);
+                }
+            }
+            else
+            {
+                Clipboard.SetDataObject(snippet.Content);
             }
         }
     }

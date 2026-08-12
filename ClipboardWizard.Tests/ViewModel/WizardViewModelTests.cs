@@ -1,4 +1,5 @@
 using ClipboardWizard.Model;
+using ClipboardWizard.Service;
 using ClipboardWizard.Tests.Fakes;
 using ClipboardWizard.ViewModel;
 
@@ -36,7 +37,7 @@ namespace ClipboardWizard.Tests.ViewModel
         {
             var (viewModel, repository, clipboard) = CreateSut();
             repository.Snippets.Add(new Snippet { Id = 1, Content = "match", Order = 0 });
-            clipboard.CurrentText = "match";
+            clipboard.CurrentContent = new ClipboardContent { Type = ClipboardContentType.Text, Text = "match" };
 
             await viewModel.LoadAsync();
 
@@ -105,6 +106,91 @@ namespace ClipboardWizard.Tests.ViewModel
 
             Assert.Equal(State.Inactive, viewModel.SnippetViewModels[0].State);
             Assert.Equal(State.Inactive, viewModel.SnippetViewModels[1].State);
+        }
+
+        [Fact]
+        public async Task ClipboardChanged_ImageNoMatchAndRecording_CreatesAndPersistsActiveImageSnippet()
+        {
+            var (viewModel, repository, clipboard) = CreateSut();
+            await viewModel.LoadAsync();
+            viewModel.Recording = true;
+            byte[] imageData = [1, 2, 3];
+
+            clipboard.RaiseImageCopied(imageData);
+            await Task.Delay(50);
+
+            Snippet saved = Assert.Single(viewModel.SnippetViewModels).Snippet;
+            Assert.Equal(SnippetType.Image, saved.Type);
+            Assert.Equal(imageData, saved.ImageData);
+            Assert.Equal(State.Active, viewModel.SnippetViewModels[0].State);
+            Assert.Equal(1, repository.SaveCount);
+        }
+
+        [Fact]
+        public async Task ClipboardChanged_ImageMatchesExistingImageSnippet_MarksItActiveWithoutDuplicating()
+        {
+            byte[] imageData = [4, 5, 6];
+            var (viewModel, repository, clipboard) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Type = SnippetType.Image, ImageData = imageData, Order = 0 });
+            await viewModel.LoadAsync();
+            viewModel.Recording = true;
+
+            clipboard.RaiseImageCopied(imageData);
+            await Task.Delay(50);
+
+            Assert.Single(viewModel.SnippetViewModels);
+            Assert.Equal(State.Active, viewModel.SnippetViewModels[0].State);
+            Assert.Equal(0, repository.SaveCount);
+        }
+
+        [Fact]
+        public async Task ClipboardChanged_ImageDoesNotMatchTextSnippet_EvenWithOverlappingBytes()
+        {
+            var (viewModel, repository, clipboard) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Type = SnippetType.Text, Content = "abc", Order = 0 });
+            await viewModel.LoadAsync();
+
+            clipboard.RaiseImageCopied([1, 2, 3]);
+
+            Assert.Equal(State.Inactive, viewModel.SnippetViewModels[0].State);
+        }
+
+        [Fact]
+        public async Task SaveClipboardSnippetAsync_WithImageOnClipboard_CreatesImageSnippet()
+        {
+            var (viewModel, repository, clipboard) = CreateSut();
+            await viewModel.LoadAsync();
+            clipboard.CurrentContent = new ClipboardContent { Type = ClipboardContentType.Image, ImageData = [7, 8] };
+
+            await viewModel.SaveClipboardSnippetAsync();
+
+            Snippet saved = Assert.Single(viewModel.SnippetViewModels).Snippet;
+            Assert.Equal(SnippetType.Image, saved.Type);
+        }
+
+        [Theory]
+        [InlineData(null, null, false)]
+        [InlineData("", null, false)]
+        [InlineData("text", null, true)]
+        public async Task HasSaveableClipboardContent_ReflectsTextContent(string? text, byte[]? imageData, bool expected)
+        {
+            var (viewModel, _, clipboard) = CreateSut();
+            await viewModel.LoadAsync();
+            clipboard.CurrentContent = text != null || imageData != null
+                ? new ClipboardContent { Type = ClipboardContentType.Text, Text = text, ImageData = imageData }
+                : null;
+
+            Assert.Equal(expected, viewModel.HasSaveableClipboardContent);
+        }
+
+        [Fact]
+        public async Task HasSaveableClipboardContent_TrueForNonEmptyImage()
+        {
+            var (viewModel, _, clipboard) = CreateSut();
+            await viewModel.LoadAsync();
+            clipboard.CurrentContent = new ClipboardContent { Type = ClipboardContentType.Image, ImageData = [1] };
+
+            Assert.True(viewModel.HasSaveableClipboardContent);
         }
 
         [Fact]

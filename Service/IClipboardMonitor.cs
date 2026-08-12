@@ -4,8 +4,9 @@ namespace ClipboardWizard.Service
 {
     public interface IClipboardMonitor
     {
-        event EventHandler<string> TextCopied;
+        event EventHandler<ClipboardContent> ContentCopied;
 
-        string CurrentText { get; }
+        /// <summary>Null if the clipboard currently holds nothing in a supported format.</summary>
+        ClipboardContent CurrentContent { get; }
     }
 }

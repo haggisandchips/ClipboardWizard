@@ -34,7 +34,10 @@ namespace ClipboardWizard.ViewModel
 
         public AddSnippetCommand AddSnippet { get; }
 
-        public string ClipboardText => _clipboardMonitor.CurrentText;
+        /// <summary>Text content of the clipboard, for the (text-only) edit dialog's Active check.</summary>
+        public string ClipboardText => _clipboardMonitor.CurrentContent is { Type: ClipboardContentType.Text } content ? content.Text ?? string.Empty : string.Empty;
+
+        public bool HasSaveableClipboardContent => IsSaveable(_clipboardMonitor.CurrentContent);
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -43,7 +46,7 @@ namespace ClipboardWizard.ViewModel
             _repository = repository;
             _clipboardMonitor = clipboardMonitor;
 
-            _clipboardMonitor.TextCopied += ClipboardMonitor_TextCopied;
+            _clipboardMonitor.ContentCopied += ClipboardMonitor_ContentCopied;
 
             SaveClipboardContents = new(this);
             AddSnippet = new(this);
@@ -52,10 +55,11 @@ namespace ClipboardWizard.ViewModel
         public async Task LoadAsync()
         {
             List<Snippet> snippets = await _repository.LoadSnippetsAsync();
+            ClipboardContent current = _clipboardMonitor.CurrentContent;
 
             foreach (Snippet snippet in snippets)
             {
-                State state = IsCurrentClipboardContent(snippet) ? State.Active : State.Inactive;
+                State state = Matches(snippet, current) ? State.Active : State.Inactive;
                 SnippetViewModels.Add(new SnippetViewModel(snippet, state, this));
             }
 
@@ -84,34 +88,29 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            await CreateSnippetAsync(editSnippetViewModel.Content, editSnippetViewModel.Description);
+            ClipboardContent content = new() { Type = ClipboardContentType.Text, Text = editSnippetViewModel.Content };
+            await CreateSnippetAsync(content, editSnippetViewModel.Description);
         }
 
-        internal async Task SaveClipboardSnippetAsync()
+        internal Task SaveClipboardSnippetAsync()
         {
-            string content = _clipboardMonitor.CurrentText;
-            if (string.IsNullOrWhiteSpace(content))
-            {
-                return;
-            }
-
-            await CreateSnippetAsync(content);
+            ClipboardContent content = _clipboardMonitor.CurrentContent;
+            return IsSaveable(content) ? CreateSnippetAsync(content) : Task.CompletedTask;
         }
 
-        private void ClipboardMonitor_TextCopied(object sender, string content)
+        private void ClipboardMonitor_ContentCopied(object sender, ClipboardContent content)
         {
-            bool nullOrWhitespace = string.IsNullOrWhiteSpace(content);
             bool matched = false;
 
             foreach (SnippetViewModel snippetViewModel in SnippetViewModels)
             {
-                bool equal = !nullOrWhitespace && snippetViewModel.Snippet.Content.Equals(content, StringComparison.Ordinal);
+                bool equal = Matches(snippetViewModel.Snippet, content);
                 snippetViewModel.State = equal ? State.Active : State.Inactive;
 
                 matched |= equal;
             }
 
-            if (!nullOrWhitespace && !matched && Recording)
+            if (!matched && Recording && IsSaveable(content))
             {
                 // Fire-and-forget: this runs off the back of an automatic clipboard event with
                 // no user-facing command to report failure through, so it logs instead of
@@ -120,7 +119,7 @@ namespace ClipboardWizard.ViewModel
             }
         }
 
-        private async Task TryAutoSaveAsync(string content)
+        private async Task TryAutoSaveAsync(ClipboardContent content)
         {
             try
             {
@@ -132,26 +131,50 @@ namespace ClipboardWizard.ViewModel
             }
         }
 
-        private async Task CreateSnippetAsync(string content, string description = null)
+        private async Task CreateSnippetAsync(ClipboardContent content, string description = null)
         {
             Snippet snippet = new()
             {
-                Content = content,
+                Type = content.Type == ClipboardContentType.Image ? SnippetType.Image : SnippetType.Text,
+                Content = content.Text,
+                ImageData = content.ImageData,
                 Description = description,
                 Order = GetNextOrder()
             };
 
             await _repository.SaveSnippetAsync(snippet);
 
-            State state = IsCurrentClipboardContent(snippet) ? State.Active : State.Inactive;
+            State state = Matches(snippet, _clipboardMonitor.CurrentContent) ? State.Active : State.Inactive;
             SnippetViewModels.Add(new SnippetViewModel(snippet, state, this));
             RefreshEdgeFlags();
         }
 
-        private bool IsCurrentClipboardContent(Snippet snippet)
+        private static bool IsSaveable(ClipboardContent content)
         {
-            string content = _clipboardMonitor.CurrentText;
-            return !string.IsNullOrWhiteSpace(content) && snippet.Content.Equals(content, StringComparison.Ordinal);
+            return content switch
+            {
+                { Type: ClipboardContentType.Text, Text: var text } => !string.IsNullOrWhiteSpace(text),
+                { Type: ClipboardContentType.Image, ImageData: var data } => data is { Length: > 0 },
+                _ => false
+            };
+        }
+
+        private static bool Matches(Snippet snippet, ClipboardContent content)
+        {
+            if (!IsSaveable(content))
+            {
+                return false;
+            }
+
+            return snippet.Type switch
+            {
+                SnippetType.Text => content.Type == ClipboardContentType.Text
+                    && string.Equals(snippet.Content, content.Text, StringComparison.Ordinal),
+                SnippetType.Image => content.Type == ClipboardContentType.Image
+                    && snippet.ImageData != null
+                    && content.ImageData.AsSpan().SequenceEqual(snippet.ImageData),
+                _ => false
+            };
         }
 
         public Task UpdateSnippetAsync(Snippet snippet)

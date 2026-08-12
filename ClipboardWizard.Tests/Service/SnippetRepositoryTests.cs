@@ -71,6 +71,30 @@ namespace ClipboardWizard.Tests.Service
         }
 
         [Fact]
+        public async Task ImageSnippet_RoundTripsTypeAndImageData()
+        {
+            byte[] imageData = [1, 2, 3, 4, 5];
+            Snippet snippet = new() { Type = SnippetType.Image, ImageData = imageData, Order = 0 };
+
+            await _repository.SaveSnippetAsync(snippet);
+            Snippet loaded = Assert.Single(await _repository.LoadSnippetsAsync());
+
+            Assert.Equal(SnippetType.Image, loaded.Type);
+            Assert.Equal(imageData, loaded.ImageData);
+        }
+
+        [Fact]
+        public async Task TextSnippet_DefaultsToTextType()
+        {
+            Snippet snippet = new() { Content = "plain text", Order = 0 };
+
+            await _repository.SaveSnippetAsync(snippet);
+            Snippet loaded = Assert.Single(await _repository.LoadSnippetsAsync());
+
+            Assert.Equal(SnippetType.Text, loaded.Type);
+        }
+
+        [Fact]
         public async Task Locked_PersistsAsTrueAndCannotBeReloadedAsFalse()
         {
             Snippet snippet = new() { Content = "protected", Order = 0, Locked = true };

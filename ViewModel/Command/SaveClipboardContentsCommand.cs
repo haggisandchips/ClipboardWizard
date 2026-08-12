@@ -20,7 +20,7 @@ namespace ClipboardWizard.ViewModel.Command
 
         public bool CanExecute(object parameter)
         {
-            return !string.IsNullOrWhiteSpace(_wizardViewModel.ClipboardText);
+            return _wizardViewModel.HasSaveableClipboardContent;
         }
 
         public async void Execute(object parameter)
