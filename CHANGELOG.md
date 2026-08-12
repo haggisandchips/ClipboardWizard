@@ -5,6 +5,8 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-12
+
 ### Added
 
 - Persistent clipboard snippet list, backed by a local SQLite database,

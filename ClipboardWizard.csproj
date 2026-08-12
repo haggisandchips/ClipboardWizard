@@ -5,7 +5,7 @@
     <UseWPF>true</UseWPF>
     <ApplicationIcon>wizard-hat.ico</ApplicationIcon>
     <!-- Overridden by CI (-p:Version=) from the release tag; this is just the local-dev default. -->
-    <Version>0.1.0</Version>
+    <Version>1.0.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="wizard-hat.ico" />
