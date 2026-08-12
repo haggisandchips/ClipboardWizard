@@ -54,13 +54,12 @@ running while developing.
 
 ## Licensing
 
-No LICENSE file exists yet for this project's own code (pending a decision
-- see below). Third-party dependency licenses are inventoried in
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), including which ones
-matter for choosing a GPL variant: one shipped dependency
-(SQLitePCLRaw, Apache-2.0) is incompatible with GPLv2-only, so GPLv3 (or
-"GPLv2-or-later") is the viable choice if this project adopts GPL. Re-check
-that file when adding or upgrading a dependency.
+Licensed under [GPLv3](LICENSE). Third-party dependency licenses are
+inventoried in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) - GPLv3
+rather than GPLv2-only was required because one shipped dependency
+(SQLitePCLRaw, Apache-2.0) is incompatible with GPLv2-only. Re-check that
+file, and this compatibility question, when adding or upgrading a
+dependency.
 
 The app's window/taskbar icon is the Font Awesome Free "hat-wizard" icon
 (CC BY 4.0), rendered at runtime via the FontAwesome5 dependency already in

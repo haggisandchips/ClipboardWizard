@@ -29,7 +29,7 @@ currently referenced; re-check on upgrade.
 | Microsoft.NET.Test.Sdk 17.14.1 | MIT |
 | coverlet.collector 6.0.4 | MIT |
 
-## GPL compatibility, if this project adopts a GPL license
+## GPL compatibility (this project is licensed GPLv3 - see [LICENSE](LICENSE))
 
 Everything above is MIT except the **SQLitePCLRaw family (Apache-2.0)**,
 which is shipped in the built app, and Font Awesome's icon/font assets
@@ -37,13 +37,11 @@ which is shipped in the built app, and Font Awesome's icon/font assets
 compatible separate license alongside GPL code is standard practice and not
 a compliance issue on its own).
 
-The Apache-2.0 dependency is the one that matters for picking a GPL
-variant:
+The Apache-2.0 dependency is why GPLv3 was chosen over GPLv2:
 
-- **GPLv2-only is not viable** - the FSF lists Apache-2.0 as incompatible
-  with GPLv2 (patent-clause conflict).
-- **GPLv3** (or "GPLv2-or-later") is fine - GPLv3 was explicitly drafted to
-  be Apache-2.0-compatible.
+- **GPLv2-only would not have been viable** - the FSF lists Apache-2.0 as
+  incompatible with GPLv2 (patent-clause conflict).
+- **GPLv3** is fine - it was explicitly drafted to be Apache-2.0-compatible.
 
 MIT dependencies are compatible with any GPL version and impose no
 constraint on the choice.
