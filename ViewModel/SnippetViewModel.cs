@@ -155,6 +155,12 @@ namespace ClipboardWizard.ViewModel
             return _host.MoveSnippetDownAsync(this);
         }
 
+        /// <summary>Drag-and-drop reordering: moves this snippet immediately before/after <paramref name="target"/>.</summary>
+        internal Task MoveToAsync(SnippetViewModel target, bool insertBefore)
+        {
+            return _host.MoveSnippetToAsync(this, target, insertBefore);
+        }
+
         internal async Task HandleLockAsync()
         {
             if (Snippet.Locked)

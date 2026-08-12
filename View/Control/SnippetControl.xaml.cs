@@ -1,21 +1,51 @@
 ﻿using ClipboardWizard.Model;
 using ClipboardWizard.Service;
+using ClipboardWizard.ViewModel;
 using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Input;
 
 namespace ClipboardWizard.View.Control
 {
     /// <summary>
-    /// Interaction logic for SnippetControl.xaml
+    /// Interaction logic for SnippetControl.xaml. Drag SOURCE only - WizardView owns drop
+    /// handling and the shared drop-position indicator, since a boundary between two tiles
+    /// is one shared insertion point, not something each tile should track separately.
     /// </summary>
     public partial class SnippetControl : UserControl
     {
+        private Point _dragStartPoint;
+
         public SnippetControl()
         {
             InitializeComponent();
+        }
+
+        private void Root_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = e.GetPosition(null);
+        }
+
+        private void Root_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton != MouseButtonState.Pressed || DataContext is not SnippetViewModel snippetViewModel)
+            {
+                return;
+            }
+
+            Vector dragged = _dragStartPoint - e.GetPosition(null);
+
+            if (Math.Abs(dragged.X) < SystemParameters.MinimumHorizontalDragDistance &&
+                Math.Abs(dragged.Y) < SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+
+            DataObject dragData = new(DragDropFormats.Snippet, snippetViewModel);
+            _ = DragDrop.DoDragDrop(this, dragData, DragDropEffects.Move);
         }
     }
 

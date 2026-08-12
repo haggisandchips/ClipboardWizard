@@ -74,7 +74,9 @@
         <local:IsNotEmptyConverter x:Key="isNotEmptyConverter"/>
     </UserControl.Resources>
 
-    <Grid Height="150">
+    <Grid Height="150"
+          PreviewMouseLeftButtonDown="Root_PreviewMouseLeftButtonDown"
+          PreviewMouseMove="Root_PreviewMouseMove">
         <Button Content="{Binding}" Command="{Binding Copy}" CommandParameter="{Binding}" Padding="5" Margin="5">
             <Button.Style>
                 <MultiBinding Converter="{StaticResource styleConverter}">

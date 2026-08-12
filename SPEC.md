@@ -55,6 +55,14 @@ over a dark image thumbnail.
   the top/bottom of the list respectively.
 - **Lock** — see below.
 
+A snippet tile can also be **dragged and dropped onto another tile** to
+move it directly to that position in one step, as an alternative to
+repeated Move up/down clicks. A thin blue line on the left or right edge of
+the tile being hovered over shows where the dragged tile will land -
+hovering the left half inserts before that tile, the right half inserts
+after, regardless of which direction it was dragged from. Dropping a tile
+onto itself does nothing.
+
 **Locking.** A snippet can be permanently protected from deletion:
 1. Clicking the lock icon on an unprotected snippet locks it permanently.
    This cannot be undone — there is no unlock action, by design, for

@@ -51,22 +51,38 @@
                 <Button Command="{Binding AddSnippet}" Focusable="False" Content="New"></Button>
             </StackPanel>
         </DockPanel>
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
-            <ItemsControl ItemsSource="{Binding SnippetViewModels}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <UniformGrid x:Name="SnippetsUniformGrid"
-                                     VerticalAlignment="Top"
-                                     Loaded="SnippetsUniformGrid_Loaded"/>
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <uc:SnippetControl />
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
-        </ScrollViewer>
+        <Grid AllowDrop="True"
+              DragOver="SnippetsHost_DragOver"
+              DragLeave="SnippetsHost_DragLeave"
+              Drop="SnippetsHost_Drop">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
+                <ItemsControl ItemsSource="{Binding SnippetViewModels}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid x:Name="SnippetsUniformGrid"
+                                         VerticalAlignment="Top"
+                                         Loaded="SnippetsUniformGrid_Loaded"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <uc:SnippetControl />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <!-- One shared indicator for the whole tile area, positioned over whichever tile
+                 boundary is currently the drop target - not one per tile, since the seam
+                 between two tiles is a single insertion point regardless of which side it's
+                 approached from. IsHitTestVisible=False so it never blocks the drag events
+                 this Grid needs to keep receiving. -->
+            <Canvas x:Name="IndicatorCanvas" IsHitTestVisible="False">
+                <Border x:Name="DropIndicator"
+                        Width="4"
+                        Background="DodgerBlue"
+                        Visibility="Collapsed" />
+            </Canvas>
+        </Grid>
     </DockPanel>
 
 </mah:MetroWindow>

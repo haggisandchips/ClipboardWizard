@@ -20,5 +20,11 @@ namespace ClipboardWizard.ViewModel
         Task MoveSnippetUpAsync(SnippetViewModel snippetViewModel);
 
         Task MoveSnippetDownAsync(SnippetViewModel snippetViewModel);
+
+        /// <summary>
+        /// Drag-and-drop reordering: moves snippetViewModel to sit immediately before or after
+        /// targetSnippetViewModel, regardless of which direction it was dragged from.
+        /// </summary>
+        Task MoveSnippetToAsync(SnippetViewModel snippetViewModel, SnippetViewModel targetSnippetViewModel, bool insertBefore);
     }
 }

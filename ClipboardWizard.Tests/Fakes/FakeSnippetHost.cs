@@ -15,6 +15,8 @@ namespace ClipboardWizard.Tests.Fakes
 
         public List<SnippetViewModel> MovedDown { get; } = new();
 
+        public List<(SnippetViewModel Snippet, SnippetViewModel Target, bool InsertBefore)> MovedTo { get; } = new();
+
         public Task UpdateSnippetAsync(Snippet snippet)
         {
             UpdatedSnippets.Add(snippet);
@@ -36,6 +38,12 @@ namespace ClipboardWizard.Tests.Fakes
         public Task MoveSnippetDownAsync(SnippetViewModel snippetViewModel)
         {
             MovedDown.Add(snippetViewModel);
+            return Task.CompletedTask;
+        }
+
+        public Task MoveSnippetToAsync(SnippetViewModel snippetViewModel, SnippetViewModel targetSnippetViewModel, bool insertBefore)
+        {
+            MovedTo.Add((snippetViewModel, targetSnippetViewModel, insertBefore));
             return Task.CompletedTask;
         }
     }

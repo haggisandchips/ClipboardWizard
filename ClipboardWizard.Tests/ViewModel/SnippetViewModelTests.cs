@@ -49,6 +49,21 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task MoveToAsync_DelegatesToHostWithSelfTargetAndSide()
+        {
+            FakeSnippetHost host = new();
+            SnippetViewModel dragged = new(new Snippet(), State.Inactive, host);
+            SnippetViewModel target = new(new Snippet(), State.Inactive, host);
+
+            await dragged.MoveToAsync(target, insertBefore: true);
+
+            var move = Assert.Single(host.MovedTo);
+            Assert.Same(dragged, move.Snippet);
+            Assert.Same(target, move.Target);
+            Assert.True(move.InsertBefore);
+        }
+
+        [Fact]
         public async Task HandleLockAsync_WhenUnlocked_PermanentlyLocksAndPersists()
         {
             FakeSnippetHost host = new();

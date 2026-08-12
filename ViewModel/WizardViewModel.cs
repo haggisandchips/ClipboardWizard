@@ -216,6 +216,53 @@ namespace ClipboardWizard.ViewModel
             RefreshEdgeFlags();
         }
 
+        public async Task MoveSnippetToAsync(SnippetViewModel snippetViewModel, SnippetViewModel targetSnippetViewModel, bool insertBefore)
+        {
+            int currentIndex = SnippetViewModels.IndexOf(snippetViewModel);
+            int targetIndex = SnippetViewModels.IndexOf(targetSnippetViewModel);
+
+            if (currentIndex < 0 || targetIndex < 0 || currentIndex == targetIndex)
+            {
+                return;
+            }
+
+            // ObservableCollection.Move(old, new) removes at `old` first, which shifts
+            // everything after it left by one - so the same `new` index lands *before* the
+            // target when moving backward but *after* it when moving forward, unless
+            // corrected for here. insertBefore must mean the same thing regardless of which
+            // direction the item is dragged from.
+            int desiredIndex = insertBefore ? targetIndex : targetIndex + 1;
+            if (currentIndex < desiredIndex)
+            {
+                desiredIndex--;
+            }
+
+            if (desiredIndex == currentIndex)
+            {
+                return;
+            }
+
+            SnippetViewModels.Move(currentIndex, desiredIndex);
+
+            // Renumbering the whole list (rather than only shifting the items between the old
+            // and new position) is simpler to get right for an arbitrary-distance move, and
+            // this list is small enough that the extra writes don't matter. Only snippets whose
+            // Order actually changed get persisted.
+            List<Task> updates = new();
+            for (int i = 0; i < SnippetViewModels.Count; i++)
+            {
+                Snippet snippet = SnippetViewModels[i].Snippet;
+                if (snippet.Order != i)
+                {
+                    snippet.Order = i;
+                    updates.Add(_repository.UpdateSnippetAsync(snippet));
+                }
+            }
+            await Task.WhenAll(updates);
+
+            RefreshEdgeFlags();
+        }
+
         private void RefreshEdgeFlags()
         {
             for (int i = 0; i < SnippetViewModels.Count; i++)

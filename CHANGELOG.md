@@ -5,6 +5,13 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- Drag-and-drop snippet reordering: drag a tile onto another to move it
+  there directly, alongside the existing Move up/down buttons. A blue edge
+  indicator shows whether it'll land before or after the tile you're
+  hovering over.
+
 ## [1.0.0] - 2026-08-12
 
 ### Added

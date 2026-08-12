@@ -257,5 +257,134 @@ namespace ClipboardWizard.Tests.ViewModel
             Assert.Equal(new[] { "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
             Assert.Equal(0, repository.UpdateCount);
         }
+
+        [Fact]
+        public async Task MoveSnippetToAsync_InsertBefore_AndRenumbersOrderToMatchNewPositions()
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            await viewModel.LoadAsync();
+            SnippetViewModel dragged = viewModel.SnippetViewModels[2]; // "c"
+            SnippetViewModel target = viewModel.SnippetViewModels[0]; // "a"
+
+            await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: true);
+
+            Assert.Equal(new[] { "c", "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { 0, 1, 2 }, viewModel.SnippetViewModels.Select(s => s.Snippet.Order));
+            Assert.True(viewModel.SnippetViewModels[0].First);
+            Assert.True(viewModel.SnippetViewModels[2].Last);
+        }
+
+        [Fact]
+        public async Task MoveSnippetToAsync_InsertAfter()
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            await viewModel.LoadAsync();
+            SnippetViewModel dragged = viewModel.SnippetViewModels[0]; // "a"
+            SnippetViewModel target = viewModel.SnippetViewModels[2]; // "c"
+
+            await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: false);
+
+            Assert.Equal(new[] { "b", "c", "a" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+        }
+
+        [Fact]
+        public async Task MoveSnippetToAsync_InsertBefore_IsBefore_RegardlessOfDragDirection()
+        {
+            // Dragging FORWARD (an earlier item onto a later one) but asking to insert
+            // before it must still land before - this is the bug being guarded against:
+            // naively calling ObservableCollection.Move(current, targetIndex) lands *after*
+            // the target when dragging forward, regardless of where the user actually
+            // dropped within the tile.
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            repository.Snippets.Add(new Snippet { Id = 4, Content = "d", Order = 3 });
+            await viewModel.LoadAsync();
+            SnippetViewModel dragged = viewModel.SnippetViewModels[0]; // "a"
+            SnippetViewModel target = viewModel.SnippetViewModels[2]; // "c"
+
+            await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: true);
+
+            Assert.Equal(new[] { "b", "a", "c", "d" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+        }
+
+        [Fact]
+        public async Task MoveSnippetToAsync_InsertAfter_IsAfter_RegardlessOfDragDirection()
+        {
+            // The mirror image: dragging BACKWARD but asking to insert after must still
+            // land after, not before.
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            repository.Snippets.Add(new Snippet { Id = 4, Content = "d", Order = 3 });
+            await viewModel.LoadAsync();
+            SnippetViewModel dragged = viewModel.SnippetViewModels[3]; // "d"
+            SnippetViewModel target = viewModel.SnippetViewModels[1]; // "b"
+
+            await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: false);
+
+            Assert.Equal(new[] { "a", "b", "d", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+        }
+
+        [Fact]
+        public async Task MoveSnippetToAsync_OnlyPersistsSnippetsWhoseOrderActuallyChanged()
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            repository.Snippets.Add(new Snippet { Id = 4, Content = "d", Order = 3 });
+            await viewModel.LoadAsync();
+            // Swapping the last two leaves the first two untouched.
+            SnippetViewModel dragged = viewModel.SnippetViewModels[3]; // "d"
+            SnippetViewModel target = viewModel.SnippetViewModels[2]; // "c"
+
+            await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: true);
+
+            Assert.Equal(new[] { "a", "b", "d", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(2, repository.UpdateCount);
+        }
+
+        [Fact]
+        public async Task MoveSnippetToAsync_ToSamePosition_IsNoOp()
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            await viewModel.LoadAsync();
+            SnippetViewModel first = viewModel.SnippetViewModels[0];
+
+            await viewModel.MoveSnippetToAsync(first, first, insertBefore: true);
+
+            Assert.Equal(new[] { "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(0, repository.UpdateCount);
+        }
+
+        [Theory]
+        [InlineData(true)] // dropping on the left half of your own immediate successor...
+        [InlineData(false)] // ...or the right half of your own immediate predecessor
+        public async Task MoveSnippetToAsync_ToItsOwnCurrentPosition_IsNoOp(bool insertBefore)
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            await viewModel.LoadAsync();
+            SnippetViewModel middle = viewModel.SnippetViewModels[1]; // "b"
+            SnippetViewModel target = insertBefore ? viewModel.SnippetViewModels[2] : viewModel.SnippetViewModels[0];
+
+            await viewModel.MoveSnippetToAsync(middle, target, insertBefore);
+
+            Assert.Equal(new[] { "a", "b", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(0, repository.UpdateCount);
+        }
     }
 }
