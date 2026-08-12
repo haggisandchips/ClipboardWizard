@@ -30,21 +30,27 @@ update snippets' Active/Inactive highlighting.
   there's no dialog-based way to hand-author an image snippet.
 
 **Snippet tile.** Each saved text snippet is shown as a tile displaying its
-description if set, otherwise its raw content; each saved image snippet
-shows a thumbnail of the image. Clicking the tile copies its content back
-to the clipboard. Tiles arrange themselves in a grid that reflows as the
-window is resized.
+description if set, otherwise its raw content. Each saved image snippet
+shows a thumbnail of the image if it has no description; if it does have
+one, the tile shows that description instead, with a small image icon
+underneath so it still reads as a picture rather than a text snippet.
+Clicking the tile copies its content back to the clipboard. Tiles arrange
+themselves in a grid that reflows as the window is resized. The hover
+toolbar (below) sits on an opaque light panel so its icons stay legible
+over a dark image thumbnail.
 
 **Per-snippet actions** (shown on hover):
 - **Copy** — click the tile itself.
 - **Delete** — permanently removes the snippet. Disabled while the snippet
   is protected (see Locking, below).
-- **Edit** — opens a dialog to change the description and/or content. Text
-  snippets only: editing isn't a single accidental click away from losing
-  the snippet the way deleting is, so unlike delete it isn't gated by the
-  lock. Image snippets have no edit action at all — there's no sensible way
-  to "edit" a picture's pixels in a text box, so the only way to change an
-  image snippet is to delete it and copy/save a replacement.
+- **Edit** — opens a dialog to change the description, and (text snippets
+  only) the content. Editing isn't a single accidental click away from
+  losing the snippet the way deleting is, so unlike delete it isn't gated
+  by the lock. For an image snippet the dialog shows the picture read-only
+  (auto-sized to the dialog, so it scales if the dialog is resized) and
+  only the description is editable — there's no sensible way to "edit" a
+  picture's pixels in a text box, so replacing the image itself still means
+  delete and copy/save a new one.
 - **Move up / Move down** — reorders the snippet in the list. Disabled at
   the top/bottom of the list respectively.
 - **Lock** — see below.
