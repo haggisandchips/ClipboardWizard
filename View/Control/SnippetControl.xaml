@@ -116,10 +116,10 @@
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Locked}" Value="true">
+                                        <DataTrigger Binding="{Binding Protected}" Value="true">
                                             <Setter Property="Template" Value="{StaticResource LockedIcon}" />
                                         </DataTrigger>
-                                        <DataTrigger Binding="{Binding Locked}" Value="false">
+                                        <DataTrigger Binding="{Binding Protected}" Value="false">
                                             <Setter Property="Template" Value="{StaticResource UnlockedIcon}" />
                                         </DataTrigger>
                                     </Style.Triggers>

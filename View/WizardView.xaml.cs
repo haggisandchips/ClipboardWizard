@@ -1,11 +1,8 @@
-﻿using ClipboardWizard.View.Control;
 using ClipboardWizard.ViewModel;
 using System;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls.Primitives;
-using System.Windows.Input;
 
 namespace ClipboardWizard.View
 {
@@ -14,13 +11,18 @@ namespace ClipboardWizard.View
     /// </summary>
     public partial class WizardView
     {
+        private readonly WizardViewModel _viewModel;
+
         public UniformGrid SnippetsUniformGrid { get; private set; }
 
-        private WizardViewModel _viewModel => Resources["vm"] as WizardViewModel;
-
-        public WizardView()
+        public WizardView(WizardViewModel viewModel)
         {
+            _viewModel = viewModel;
+
             InitializeComponent();
+
+            DataContext = _viewModel;
+            RightWindowCommandsHost.DataContext = _viewModel;
 
             _viewModel.SnippetViewModels.CollectionChanged += Snippets_CollectionChanged;
         }
@@ -45,6 +47,11 @@ namespace ClipboardWizard.View
 
         private void RecalculateColumns()
         {
+            if (SnippetsUniformGrid == null)
+            {
+                return;
+            }
+
             int columns = Math.Min((int)(SnippetsUniformGrid.ActualWidth / 200), _viewModel.SnippetViewModels.Count);
 
             SnippetsUniformGrid.Columns = columns > 0 ? columns : 1;

@@ -1,5 +1,4 @@
 ﻿using SQLite;
-using System;
 using System.ComponentModel;
 
 namespace ClipboardWizard.Model
@@ -42,6 +41,12 @@ namespace ClipboardWizard.Model
         }
 
         private bool _locked;
+
+        /// <summary>
+        /// Permanent, persisted protection flag. Once set to true it can never be reverted -
+        /// further assignments are silently ignored rather than throwing, since this is the
+        /// normal, expected way callers re-save an already-locked snippet.
+        /// </summary>
         public bool Locked
         {
             get { return _locked; }
@@ -49,7 +54,7 @@ namespace ClipboardWizard.Model
             {
                 if (_locked)
                 {
-                    throw new InvalidOperationException("Once locked, always locked");
+                    return;
                 }
 
                 _locked = value;

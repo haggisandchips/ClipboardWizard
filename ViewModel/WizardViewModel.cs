@@ -1,95 +1,74 @@
-﻿using ClipboardWizard.Model;
+using ClipboardWizard.Model;
 using ClipboardWizard.Service;
 using ClipboardWizard.View;
 using ClipboardWizard.ViewModel.Command;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
-using static WK.Libraries.SharpClipboardNS.SharpClipboard;
 
 namespace ClipboardWizard.ViewModel
 {
-    public class WizardViewModel
+    public class WizardViewModel : INotifyPropertyChanged, ISnippetHost
     {
-        public ObservableCollection<SnippetViewModel> SnippetViewModels { get; set; } = new();
+        private readonly ISnippetRepository _repository;
+        private readonly IClipboardMonitor _clipboardMonitor;
 
-        public bool Recording { get; set; }
+        public ObservableCollection<SnippetViewModel> SnippetViewModels { get; } = new();
 
-        public SaveClipboardContentsCommand SaveClipboardContents { get; private set; }
-
-        public AddSnippetCommand AddSnippet { get; private set; }
-
-        public WizardViewModel()
+        private bool _recording;
+        public bool Recording
         {
-            SnippetManager.LoadSnippets()
-                .ConvertAll(snippet => new SnippetViewModel(snippet, State.Inactive))
-                .ForEach(vm => SnippetViewModels.Add(vm));
-
-            if (SnippetViewModels.Count > 0)
+            get => _recording;
+            set
             {
-                SnippetViewModels.First().First = true;
-                SnippetViewModels.Last().Last = true;
+                _recording = value;
+                OnPropertyChanged(nameof(Recording));
             }
+        }
 
-            App.ClipboardMonitor.ClipboardChanged += ClipboardManager_ClipboardChanged;
-            App.SnippetDeleted += App_SnippetDeleted;
-            App.SnippetUpdated += App_SnippetUpdated;
-            App.OrderSnippetHigher += App_OrderSnippetHigher;
-            App.OrderSnippetLower += App_OrderSnippetLower;
+        public SaveClipboardContentsCommand SaveClipboardContents { get; }
+
+        public AddSnippetCommand AddSnippet { get; }
+
+        public string ClipboardText => _clipboardMonitor.CurrentText;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public WizardViewModel(ISnippetRepository repository, IClipboardMonitor clipboardMonitor)
+        {
+            _repository = repository;
+            _clipboardMonitor = clipboardMonitor;
+
+            _clipboardMonitor.TextCopied += ClipboardMonitor_TextCopied;
 
             SaveClipboardContents = new(this);
             AddSnippet = new(this);
         }
 
-        private void App_SnippetDeleted(object sender, App.SnippetChangedEventArgs e)
+        public async Task LoadAsync()
         {
-            SnippetViewModel snippetViewModel = e.SnippetViewModel;
-            _ = SnippetViewModels.Remove(snippetViewModel);
+            List<Snippet> snippets = await _repository.LoadSnippetsAsync();
+
+            foreach (Snippet snippet in snippets)
+            {
+                State state = IsCurrentClipboardContent(snippet) ? State.Active : State.Inactive;
+                SnippetViewModels.Add(new SnippetViewModel(snippet, state, this));
+            }
+
+            RefreshEdgeFlags();
         }
 
-        private void App_SnippetUpdated(object sender, App.SnippetChangedEventArgs e)
+        internal async Task AddNewSnippetAsync()
         {
-            SnippetViewModel snippetViewModel = e.SnippetViewModel;
-
-            string content = App.ClipboardMonitor.ClipboardText;
-
-            bool equal = !string.IsNullOrWhiteSpace(content) && snippetViewModel.Snippet.Content.Equals(content, StringComparison.Ordinal);
-            snippetViewModel.State = equal ? State.Active : State.Inactive;
-        }
-
-        private void App_OrderSnippetHigher(object sender, App.SnippetChangedEventArgs e)
-        {
-            Reorder(e.SnippetViewModel, -1);
-        }
-
-        private void App_OrderSnippetLower(object sender, App.SnippetChangedEventArgs e)
-        {
-            Reorder(e.SnippetViewModel, +1);
-        }
-
-        private void Reorder(SnippetViewModel snippetViewModel, int indexOffset)
-        {
-            int currentIndex = SnippetViewModels.IndexOf(snippetViewModel);
-            int otherIndex = currentIndex + indexOffset;
-            SnippetViewModel otherSnippetViewModel = SnippetViewModels[otherIndex];
-
-            SnippetViewModels[currentIndex] = otherSnippetViewModel;
-            SnippetViewModels[otherIndex] = snippetViewModel;
-
-            (snippetViewModel.Snippet.Order, otherSnippetViewModel.Snippet.Order) = (otherSnippetViewModel.Snippet.Order, snippetViewModel.Snippet.Order);
-            (snippetViewModel.First, otherSnippetViewModel.First) = (otherSnippetViewModel.First, snippetViewModel.First);
-            (snippetViewModel.Last, otherSnippetViewModel.Last) = (otherSnippetViewModel.Last, snippetViewModel.Last);
-        }
-
-        internal void AddNewSnippet()
-        {
-            // TODO https://stackoverflow.com/a/40792516/2194201
+            // The owner must be set before ShowDialog so the dialog centers over it and
+            // stays modal to the correct window.
             Window owner = Application.Current.MainWindow;
 
-            // TODO Provide button content Update/Save
-            // TODO Update/Save button not enabled if content is null ro whitespace
-            EditSnippetViewModel editSnippetViewModel = new EditSnippetViewModel();
+            EditSnippetViewModel editSnippetViewModel = new();
             EditSnippetView editSnippetView = new()
             {
                 DataContext = editSnippetViewModel,
@@ -100,48 +79,27 @@ namespace ClipboardWizard.ViewModel
 
             bool? result = editSnippetView.ShowDialog();
 
-            if ((bool)result)
+            if (result != true)
             {
-                Snippet snippet = new()
-                {
-                    Description = editSnippetViewModel.Description,
-                    Content = editSnippetViewModel.Content,
-                    Order = GetNextOrder()
-                };
-
-                SnippetManager.SaveSnippet(snippet);
-                SnippetViewModel snippetViewModel = new SnippetViewModel(snippet, snippet.Content.Equals(App.ClipboardMonitor.ClipboardText, StringComparison.Ordinal) ? State.Active : State.Inactive);
-
-                SnippetViewModels.Add(snippetViewModel);
+                return;
             }
+
+            await CreateSnippetAsync(editSnippetViewModel.Content, editSnippetViewModel.Description);
         }
 
-        internal void SaveSnippet()
+        internal async Task SaveClipboardSnippetAsync()
         {
-            string content = App.ClipboardMonitor.ClipboardText;
+            string content = _clipboardMonitor.CurrentText;
             if (string.IsNullOrWhiteSpace(content))
             {
                 return;
             }
 
-            Snippet snippet = new Snippet() {
-                Content = content,
-                Order = GetNextOrder()
-            };
-            SnippetManager.SaveSnippet(snippet);
-
-            SnippetViewModels.Add(new(snippet, State.Active));
+            await CreateSnippetAsync(content);
         }
 
-        private void ClipboardManager_ClipboardChanged(object sender, ClipboardChangedEventArgs e)
+        private void ClipboardMonitor_TextCopied(object sender, string content)
         {
-            if (e.ContentType != ContentTypes.Text)
-            {
-                return;
-            }
-
-            string content = e.Content.ToString();
-
             bool nullOrWhitespace = string.IsNullOrWhiteSpace(content);
             bool matched = false;
 
@@ -155,22 +113,103 @@ namespace ClipboardWizard.ViewModel
 
             if (!nullOrWhitespace && !matched && Recording)
             {
-                Snippet snippet = new Snippet() {
-                    Content = content,
-                    Order = GetNextOrder()
-                };
-                SnippetManager.SaveSnippet(snippet);
+                // Fire-and-forget: this runs off the back of an automatic clipboard event with
+                // no user-facing command to report failure through, so it logs instead of
+                // throwing back into the clipboard monitor's event.
+                _ = TryAutoSaveAsync(content);
+            }
+        }
 
-                SnippetViewModels.Add(new(snippet, State.Active));
+        private async Task TryAutoSaveAsync(string content)
+        {
+            try
+            {
+                await CreateSnippetAsync(content);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(TryAutoSaveAsync), ex);
+            }
+        }
+
+        private async Task CreateSnippetAsync(string content, string description = null)
+        {
+            Snippet snippet = new()
+            {
+                Content = content,
+                Description = description,
+                Order = GetNextOrder()
+            };
+
+            await _repository.SaveSnippetAsync(snippet);
+
+            State state = IsCurrentClipboardContent(snippet) ? State.Active : State.Inactive;
+            SnippetViewModels.Add(new SnippetViewModel(snippet, state, this));
+            RefreshEdgeFlags();
+        }
+
+        private bool IsCurrentClipboardContent(Snippet snippet)
+        {
+            string content = _clipboardMonitor.CurrentText;
+            return !string.IsNullOrWhiteSpace(content) && snippet.Content.Equals(content, StringComparison.Ordinal);
+        }
+
+        public Task UpdateSnippetAsync(Snippet snippet)
+        {
+            return _repository.UpdateSnippetAsync(snippet);
+        }
+
+        public async Task RemoveSnippetAsync(SnippetViewModel snippetViewModel)
+        {
+            await _repository.DeleteSnippetAsync(snippetViewModel.Snippet);
+            SnippetViewModels.Remove(snippetViewModel);
+            RefreshEdgeFlags();
+        }
+
+        public Task MoveSnippetUpAsync(SnippetViewModel snippetViewModel) => MoveAsync(snippetViewModel, -1);
+
+        public Task MoveSnippetDownAsync(SnippetViewModel snippetViewModel) => MoveAsync(snippetViewModel, +1);
+
+        private async Task MoveAsync(SnippetViewModel snippetViewModel, int offset)
+        {
+            int currentIndex = SnippetViewModels.IndexOf(snippetViewModel);
+            int otherIndex = currentIndex + offset;
+
+            if (currentIndex < 0 || otherIndex < 0 || otherIndex >= SnippetViewModels.Count)
+            {
+                return;
+            }
+
+            SnippetViewModel other = SnippetViewModels[otherIndex];
+
+            (snippetViewModel.Snippet.Order, other.Snippet.Order) = (other.Snippet.Order, snippetViewModel.Snippet.Order);
+
+            await _repository.UpdateSnippetAsync(snippetViewModel.Snippet);
+            await _repository.UpdateSnippetAsync(other.Snippet);
+
+            SnippetViewModels[currentIndex] = other;
+            SnippetViewModels[otherIndex] = snippetViewModel;
+
+            RefreshEdgeFlags();
+        }
+
+        private void RefreshEdgeFlags()
+        {
+            for (int i = 0; i < SnippetViewModels.Count; i++)
+            {
+                SnippetViewModels[i].First = i == 0;
+                SnippetViewModels[i].Last = i == SnippetViewModels.Count - 1;
             }
         }
 
         private int GetNextOrder()
         {
-            SnippetViewModel lastSnippetViewModel = SnippetViewModels.LastOrDefault();
-            int order = lastSnippetViewModel == null ? 0 : lastSnippetViewModel.Snippet.Order;
+            return SnippetViewModels.Count == 0 ? 0 : SnippetViewModels.Max(svm => svm.Snippet.Order) + 1;
+        }
 
-            return order + 1;
+        private void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

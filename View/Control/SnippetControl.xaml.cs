@@ -46,7 +46,10 @@ namespace ClipboardWizard.View.Control
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            Snippet snippet = value as Snippet;
+            if (value is not Snippet snippet)
+            {
+                return string.Empty;
+            }
 
             return string.IsNullOrEmpty(snippet.Description) ? snippet.Content : snippet.Description;
         }

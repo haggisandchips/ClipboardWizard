@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Windows.Input;
 
 namespace ClipboardWizard.ViewModel.Command
 {
     public class AddSnippetCommand : ICommand
     {
-        private WizardViewModel _wizardViewModel;
+        private readonly WizardViewModel _wizardViewModel;
 
         public AddSnippetCommand(WizardViewModel wizardViewModel)
         {
@@ -18,15 +18,21 @@ namespace ClipboardWizard.ViewModel.Command
             remove { CommandManager.RequerySuggested -= value; }
         }
 
-
         public bool CanExecute(object parameter)
         {
             return true;
         }
 
-        public void Execute(object parameter)
+        public async void Execute(object parameter)
         {
-            _wizardViewModel.AddNewSnippet();
+            try
+            {
+                await _wizardViewModel.AddNewSnippetAsync();
+            }
+            catch (Exception ex)
+            {
+                CommandErrorHandler.Handle(nameof(AddSnippetCommand), ex);
+            }
         }
     }
 }

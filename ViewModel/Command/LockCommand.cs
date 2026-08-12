@@ -1,4 +1,3 @@
-﻿using ClipboardWizard.Model;
 using System;
 using System.Windows.Input;
 
@@ -6,7 +5,7 @@ namespace ClipboardWizard.ViewModel.Command
 {
     public class LockCommand : ICommand
     {
-        private SnippetViewModel _snippetViewModel;
+        private readonly SnippetViewModel _snippetViewModel;
 
         public LockCommand(SnippetViewModel snippetViewModel)
         {
@@ -21,12 +20,19 @@ namespace ClipboardWizard.ViewModel.Command
 
         public bool CanExecute(object parameter)
         {
-            return _snippetViewModel.Locked || !_snippetViewModel.Snippet.Locked;
+            return _snippetViewModel.Protected || !_snippetViewModel.Snippet.Locked;
         }
 
-        public void Execute(object parameter)
+        public async void Execute(object parameter)
         {
-            _snippetViewModel.HandleLock();
+            try
+            {
+                await _snippetViewModel.HandleLockAsync();
+            }
+            catch (Exception ex)
+            {
+                CommandErrorHandler.Handle(nameof(LockCommand), ex);
+            }
         }
     }
 }

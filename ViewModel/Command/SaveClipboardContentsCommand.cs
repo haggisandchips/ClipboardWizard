@@ -1,16 +1,11 @@
-﻿using ClipboardWizard.Model;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace ClipboardWizard.ViewModel.Command
 {
     public class SaveClipboardContentsCommand : ICommand
     {
-        private WizardViewModel _wizardViewModel;
+        private readonly WizardViewModel _wizardViewModel;
 
         public SaveClipboardContentsCommand(WizardViewModel wizardViewModel)
         {
@@ -25,14 +20,19 @@ namespace ClipboardWizard.ViewModel.Command
 
         public bool CanExecute(object parameter)
         {
-            string content = App.ClipboardMonitor.ClipboardText;
-
-            return !string.IsNullOrWhiteSpace(content);
+            return !string.IsNullOrWhiteSpace(_wizardViewModel.ClipboardText);
         }
 
-        public void Execute(object parameter)
+        public async void Execute(object parameter)
         {
-            _wizardViewModel.SaveSnippet();
+            try
+            {
+                await _wizardViewModel.SaveClipboardSnippetAsync();
+            }
+            catch (Exception ex)
+            {
+                CommandErrorHandler.Handle(nameof(SaveClipboardContentsCommand), ex);
+            }
         }
     }
 }

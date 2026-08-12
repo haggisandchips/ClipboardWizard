@@ -1,16 +1,11 @@
-﻿using ClipboardWizard.Model;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace ClipboardWizard.ViewModel.Command
 {
     public class EditCommand : ICommand
     {
-        private SnippetViewModel _snippetViewModel;
+        private readonly SnippetViewModel _snippetViewModel;
 
         public EditCommand(SnippetViewModel snippetViewModel)
         {
@@ -23,14 +18,24 @@ namespace ClipboardWizard.ViewModel.Command
             remove { CommandManager.RequerySuggested -= value; }
         }
 
+        // Editing is intentionally never gated by the lock: it isn't a single accidental
+        // click away from destroying content the way delete is, so it doesn't need the
+        // same protection.
         public bool CanExecute(object parameter)
         {
             return true;
         }
 
-        public void Execute(object parameter)
+        public async void Execute(object parameter)
         {
-            _snippetViewModel.EditSnippet();
+            try
+            {
+                await _snippetViewModel.EditSnippetAsync();
+            }
+            catch (Exception ex)
+            {
+                CommandErrorHandler.Handle(nameof(EditCommand), ex);
+            }
         }
     }
 }

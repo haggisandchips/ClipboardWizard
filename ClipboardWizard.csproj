@@ -10,6 +10,17 @@
     <None Remove="witch-hat-white.png" />
   </ItemGroup>
   <ItemGroup>
+    <!-- ClipboardWizard.Tests lives under this project's own directory, so the default
+         SDK globs would otherwise pull its files into this project too. -->
+    <Compile Remove="ClipboardWizard.Tests\**" />
+    <EmbeddedResource Remove="ClipboardWizard.Tests\**" />
+    <None Remove="ClipboardWizard.Tests\**" />
+    <Page Remove="ClipboardWizard.Tests\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="ClipboardWizard.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="FontAwesome5" Version="2.1.4" />
     <PackageReference Include="MahApps.Metro" Version="2.4.9" />
     <PackageReference Include="SharpClipboard" Version="3.5.2" />

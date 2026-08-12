@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:mah="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         mc:Ignorable="d"
-        Title="Edit Snippet"
+        Title="{Binding Title}"
         MaxHeight="800"
         MaxWidth="1600"
         WindowStartupLocation="CenterOwner"
@@ -18,8 +18,8 @@
             <TextBox Text="{Binding Description, Mode=TwoWay}" TabIndex="1" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Update" Click="Update_Click" Margin="5" TabIndex="3" />
-            <Button Content="Cancel" Click="Cancel_Click" Margin="5" TabIndex="4" />
+            <Button Content="{Binding ActionButtonText}" IsEnabled="{Binding IsValid}" Click="Update_Click" Margin="5" TabIndex="3" IsDefault="True" />
+            <Button Content="Cancel" Click="Cancel_Click" Margin="5" TabIndex="4" IsCancel="True" />
         </StackPanel>
         <DockPanel>
             <Label DockPanel.Dock="Top" Content="Content" />

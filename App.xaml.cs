@@ -1,5 +1,6 @@
-﻿using ClipboardWizard.Model;
+using ClipboardWizard.Service;
 using ClipboardWizard.View;
+using ClipboardWizard.ViewModel;
 using System;
 using System.IO;
 using System.Windows;
@@ -12,60 +13,42 @@ namespace ClipboardWizard
     /// </summary>
     public partial class App : Application
     {
-        private static string _folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-        private static string _applicationName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-        private static string _databaseName = "Snippets.db";
-
-        public static string localAppPath = Path.Combine(_folderPath, _applicationName);
-        public static string databasePath = Path.Combine(localAppPath, _databaseName);
-
-        public static readonly SharpClipboard ClipboardMonitor = new();
-
-        public static event EventHandler<SnippetChangedEventArgs> SnippetDeleted;
-        public static event EventHandler<SnippetChangedEventArgs> SnippetUpdated;
-        public static event EventHandler<SnippetChangedEventArgs> OrderSnippetHigher;
-        public static event EventHandler<SnippetChangedEventArgs> OrderSnippetLower;
-
-        private void Application_Startup(object sender, StartupEventArgs e)
+        private async void Application_Startup(object sender, StartupEventArgs e)
         {
-            InitializeDatabaseFolder();
+            string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string applicationName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+            string localAppPath = Path.Combine(folderPath, applicationName);
 
-            WizardView wizardView = new();
-            wizardView.WindowStartupLocation = WindowStartupLocation.CenterScreen;
-            wizardView.Show();
-        }
+            Logger.LogPath = Path.Combine(localAppPath, "error.log");
 
-        private void InitializeDatabaseFolder()
-        {
-            if (!Directory.Exists(App.localAppPath))
+            try
             {
-                _ = Directory.CreateDirectory(App.localAppPath);
+                string databasePath = Path.Combine(localAppPath, "Snippets.db");
+
+                ISnippetRepository repository = new SnippetRepository(databasePath);
+                IClipboardMonitor clipboardMonitor = new SharpClipboardMonitor(new SharpClipboard());
+
+                WizardViewModel viewModel = new(repository, clipboardMonitor);
+                await viewModel.LoadAsync();
+
+                WizardView wizardView = new(viewModel)
+                {
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen
+                };
+                wizardView.Show();
             }
-        }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(Application_Startup), ex);
 
-        public static void UpdateSnippet(SnippetViewModel snippetViewModel)
-        {
-            SnippetUpdated?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
-        }
+                MessageBox.Show(
+                    $"Clipboard Wizard couldn't start: {ex.Message}",
+                    "Clipboard Wizard",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
 
-        public static void DeleteSnippet(SnippetViewModel snippetViewModel)
-        {
-            SnippetDeleted?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
-        }
-
-        public static void OrderHigher(SnippetViewModel snippetViewModel)
-        {
-            OrderSnippetHigher?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
-        }
-
-        public static void OrderLower(SnippetViewModel snippetViewModel)
-        {
-            OrderSnippetLower?.Invoke(null, new() { SnippetViewModel = snippetViewModel });
-        }
-
-        public class SnippetChangedEventArgs
-        {
-            public SnippetViewModel SnippetViewModel { get; set; }
+                Shutdown(-1);
+            }
         }
     }
 }

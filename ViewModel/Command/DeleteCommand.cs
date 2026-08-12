@@ -1,4 +1,3 @@
-﻿using ClipboardWizard.Model;
 using System;
 using System.Windows.Input;
 
@@ -6,7 +5,7 @@ namespace ClipboardWizard.ViewModel.Command
 {
     public class DeleteCommand : ICommand
     {
-        private SnippetViewModel _snippetViewModel;
+        private readonly SnippetViewModel _snippetViewModel;
 
         public DeleteCommand(SnippetViewModel snippetViewModel)
         {
@@ -21,12 +20,19 @@ namespace ClipboardWizard.ViewModel.Command
 
         public bool CanExecute(object parameter)
         {
-            return !_snippetViewModel.Locked;
+            return !_snippetViewModel.Protected;
         }
 
-        public void Execute(object parameter)
+        public async void Execute(object parameter)
         {
-            _snippetViewModel.DeleteSnippet();
+            try
+            {
+                await _snippetViewModel.DeleteSnippetAsync();
+            }
+            catch (Exception ex)
+            {
+                CommandErrorHandler.Handle(nameof(DeleteCommand), ex);
+            }
         }
     }
 }

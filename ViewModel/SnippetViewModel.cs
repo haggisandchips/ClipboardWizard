@@ -1,6 +1,5 @@
-﻿using ClipboardWizard.Service;
+using ClipboardWizard.Model;
 using ClipboardWizard.View;
-using ClipboardWizard.ViewModel;
 using ClipboardWizard.ViewModel.Command;
 using System;
 using System.ComponentModel;
@@ -8,10 +7,11 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
-namespace ClipboardWizard.Model
+namespace ClipboardWizard.ViewModel
 {
     public class SnippetViewModel : INotifyPropertyChanged
     {
+        private readonly ISnippetHost _host;
 
         private Snippet _snippet;
         public Snippet Snippet
@@ -35,18 +35,25 @@ namespace ClipboardWizard.Model
             }
         }
 
-        private bool _locked;
-        public bool Locked
+        private bool _protected;
+
+        /// <summary>
+        /// Transient, display-only: true while this snippet is protected from deletion.
+        /// Distinct from the permanent, persisted Snippet.Locked - this flips to false for a
+        /// few seconds after the lock icon is clicked, to give the user a short window to
+        /// click delete, then re-locks itself automatically.
+        /// </summary>
+        public bool Protected
         {
-            get => _locked;
-            set
+            get => _protected;
+            private set
             {
-                _locked = value;
-                OnPropertyChanged(nameof(Locked));
+                _protected = value;
+                OnPropertyChanged(nameof(Protected));
             }
         }
 
-        private bool _first = false;
+        private bool _first;
         public bool First
         {
             get => _first;
@@ -57,7 +64,7 @@ namespace ClipboardWizard.Model
             }
         }
 
-        private bool _last = false;
+        private bool _last;
         public bool Last
         {
             get => _last;
@@ -70,23 +77,24 @@ namespace ClipboardWizard.Model
 
         public CopyCommand Copy { get; } = new();
 
-        public DeleteCommand Delete { get; private set; }
+        public DeleteCommand Delete { get; }
 
-        public LockCommand Lock { get; private set; }
+        public LockCommand Lock { get; }
 
-        public EditCommand Edit { get; private set; }
+        public EditCommand Edit { get; }
 
-        public OrderHigherCommand OrderHigher { get; private set; }
+        public OrderHigherCommand OrderHigher { get; }
 
-        public OrderLowerCommand OrderLower { get; private set; }
+        public OrderLowerCommand OrderLower { get; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public SnippetViewModel(Snippet snippet, State state)
+        public SnippetViewModel(Snippet snippet, State state, ISnippetHost host)
         {
             Snippet = snippet;
             State = state;
-            Locked = snippet.Locked;
+            Protected = snippet.Locked;
+            _host = host;
 
             Delete = new(this);
             Edit = new(this);
@@ -95,18 +103,18 @@ namespace ClipboardWizard.Model
             Lock = new(this);
         }
 
-        internal void DeleteSnippet()
+        internal Task DeleteSnippetAsync()
         {
-            SnippetManager.DeleteSnippet(Snippet);
-            App.DeleteSnippet(this);
+            return _host.RemoveSnippetAsync(this);
         }
 
-        internal void EditSnippet()
+        internal async Task EditSnippetAsync()
         {
-            // TODO https://stackoverflow.com/a/40792516/2194201
+            // The owner must be set before ShowDialog so the dialog centers over it and
+            // stays modal to the correct window.
             Window owner = Application.Current.MainWindow;
 
-            EditSnippetViewModel editSnippetViewModel = new EditSnippetViewModel(Snippet);
+            EditSnippetViewModel editSnippetViewModel = new(Snippet);
             EditSnippetView editSnippetView = new()
             {
                 DataContext = editSnippetViewModel,
@@ -117,55 +125,50 @@ namespace ClipboardWizard.Model
 
             bool? result = editSnippetView.ShowDialog();
 
-            if ((bool)result)
+            if (result != true)
             {
-                Snippet.Description = editSnippetViewModel.Description;
-                Snippet.Content = editSnippetViewModel.Content;
-                SnippetManager.UpdateSnippet(Snippet);
-
-                if (Snippet.Content.Equals(App.ClipboardMonitor.ClipboardText, StringComparison.Ordinal))
-                {
-                    State = State.Active;
-                }
-                else
-                {
-                    State = State.Inactive;
-                }
-
-                OnPropertyChanged(nameof(Snippet));
+                return;
             }
+
+            Snippet.Description = editSnippetViewModel.Description;
+            Snippet.Content = editSnippetViewModel.Content;
+
+            await _host.UpdateSnippetAsync(Snippet);
+
+            State = Snippet.Content.Equals(_host.ClipboardText, StringComparison.Ordinal) ? State.Active : State.Inactive;
+
+            OnPropertyChanged(nameof(Snippet));
         }
 
-        internal void OrderSnippetHigher()
+        internal Task OrderSnippetHigherAsync()
         {
-            SnippetManager.OrderHigher(Snippet);
-            App.OrderHigher(this);
+            return _host.MoveSnippetUpAsync(this);
         }
 
-        internal void OrderSnippetLower() {
-            SnippetManager.OrderLower(Snippet);
-            App.OrderLower(this);
+        internal Task OrderSnippetLowerAsync()
+        {
+            return _host.MoveSnippetDownAsync(this);
         }
 
-        internal void HandleLock()
+        internal async Task HandleLockAsync()
         {
             if (Snippet.Locked)
             {
-                Locked = false;
-                _ = ScheduleReLockAsync();
+                Protected = false;
+                _ = ScheduleReProtectAsync();
             }
             else
             {
                 Snippet.Locked = true;
-                Locked = true;
-                SnippetManager.UpdateSnippet(Snippet);
+                Protected = true;
+                await _host.UpdateSnippetAsync(Snippet);
             }
         }
 
-        private async Task ScheduleReLockAsync()
+        private async Task ScheduleReProtectAsync()
         {
             await Task.Delay(TimeSpan.FromSeconds(3.0));
-            Locked = true;
+            Protected = true;
             CommandManager.InvalidateRequerySuggested();
         }
 

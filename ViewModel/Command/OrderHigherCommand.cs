@@ -1,4 +1,3 @@
-﻿using ClipboardWizard.Model;
 using System;
 using System.Windows.Input;
 
@@ -6,7 +5,7 @@ namespace ClipboardWizard.ViewModel.Command
 {
     public class OrderHigherCommand : ICommand
     {
-        private SnippetViewModel _snippetViewModel;
+        private readonly SnippetViewModel _snippetViewModel;
 
         public OrderHigherCommand(SnippetViewModel snippetViewModel)
         {
@@ -24,9 +23,16 @@ namespace ClipboardWizard.ViewModel.Command
             return !_snippetViewModel.First;
         }
 
-        public void Execute(object parameter)
+        public async void Execute(object parameter)
         {
-            _snippetViewModel.OrderSnippetHigher();
+            try
+            {
+                await _snippetViewModel.OrderSnippetHigherAsync();
+            }
+            catch (Exception ex)
+            {
+                CommandErrorHandler.Handle(nameof(OrderHigherCommand), ex);
+            }
         }
     }
 }
