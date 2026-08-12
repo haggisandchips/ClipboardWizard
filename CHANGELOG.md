@@ -5,8 +5,6 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-08-12
-
 ### Added
 
 - Persistent clipboard snippet list, backed by a local SQLite database,
@@ -26,3 +24,4 @@ Notable changes to Clipboard Wizard. Format loosely follows
   removed.
 - Self-updating installer/release mechanism: checks GitHub Releases on
   startup and offers to apply new versions.
+- GPLv3 license.
