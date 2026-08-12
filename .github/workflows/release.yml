@@ -68,7 +68,7 @@ jobs:
           --outputDir release
           --packTitle "Clipboard Wizard"
           --packAuthors "Ivor Potter"
-          --icon witch-hat-white.ico
+          --icon wizard-hat.ico
 
       - name: Upload packaged release as a build artifact
         uses: actions/upload-artifact@v4

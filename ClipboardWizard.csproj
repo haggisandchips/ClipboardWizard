@@ -3,13 +3,12 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
-    <ApplicationIcon>witch-hat-white.ico</ApplicationIcon>
+    <ApplicationIcon>wizard-hat.ico</ApplicationIcon>
     <!-- Overridden by CI (-p:Version=) from the release tag; this is just the local-dev default. -->
     <Version>0.1.0</Version>
   </PropertyGroup>
   <ItemGroup>
-    <None Remove="witch-hat-white.ico" />
-    <None Remove="witch-hat-white.png" />
+    <None Remove="wizard-hat.ico" />
   </ItemGroup>
   <ItemGroup>
     <!-- ClipboardWizard.Tests lives under this project's own directory, so the default
@@ -30,7 +29,6 @@
     <PackageReference Include="Velopack" Version="1.2.0" />
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="witch-hat-white.ico" />
-    <Resource Include="witch-hat-white.png" />
+    <Resource Include="wizard-hat.ico" />
   </ItemGroup>
 </Project>

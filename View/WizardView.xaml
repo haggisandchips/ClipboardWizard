@@ -12,6 +12,9 @@
                  Width="800"
                  MinWidth="200">
 
+    <!-- Font Awesome Free Solid "hat-wizard" (fa-hat-wizard), rendered live rather than as a
+         bundled image - CC BY 4.0, via the FontAwesome5 package this project already
+         depends on. See THIRD-PARTY-NOTICES.md. -->
     <mah:MetroWindow.IconTemplate>
         <DataTemplate>
             <Grid Width="{TemplateBinding Width}"
@@ -20,7 +23,7 @@
                  Background="Transparent"
                  RenderOptions.EdgeMode="Aliased"
                  RenderOptions.BitmapScalingMode="HighQuality">
-                <Image Source="../witch-hat-white.png"></Image>
+                <fa5:FontAwesome Icon="Solid_HatWizard" Foreground="White" />
             </Grid>
         </DataTemplate>
     </mah:MetroWindow.IconTemplate>

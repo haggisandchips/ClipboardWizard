@@ -36,7 +36,7 @@ To do the same locally (e.g. to test a packaging change before tagging):
 ```
 dotnet tool install -g vpk
 dotnet publish ClipboardWizard.csproj -c Release -r win-x64 --self-contained true -p:Version=0.1.0 -o publish
-vpk pack --packId ClipboardWizard --packVersion 0.1.0 --packDir publish --mainExe ClipboardWizard.exe --outputDir release --packTitle "Clipboard Wizard" --packAuthors "Ivor Potter" --icon witch-hat-white.ico
+vpk pack --packId ClipboardWizard --packVersion 0.1.0 --packDir publish --mainExe ClipboardWizard.exe --outputDir release --packTitle "Clipboard Wizard" --packAuthors "Ivor Potter" --icon wizard-hat.ico
 ```
 
 `vpk pack` prints a warning that `VelopackApp.Run()` "does not look like
@@ -51,6 +51,24 @@ version on startup (fire-and-forget, never blocks startup) via
 (`UpdateManager.IsInstalled == false`) when running from a plain `dotnet
 build`/`publish` rather than an installed copy — so it's safe to leave
 running while developing.
+
+## Licensing
+
+No LICENSE file exists yet for this project's own code (pending a decision
+- see below). Third-party dependency licenses are inventoried in
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md), including which ones
+matter for choosing a GPL variant: one shipped dependency
+(SQLitePCLRaw, Apache-2.0) is incompatible with GPLv2-only, so GPLv3 (or
+"GPLv2-or-later") is the viable choice if this project adopts GPL. Re-check
+that file when adding or upgrading a dependency.
+
+The app's window/taskbar icon is the Font Awesome Free "hat-wizard" icon
+(CC BY 4.0), rendered at runtime via the FontAwesome5 dependency already in
+the project (`View/WizardView.xaml`'s `IconTemplate`) and, for the `.exe`'s
+embedded icon (`wizard-hat.ico`, which has to be an actual raster file, not
+a live glyph), rasterized from the same vector path data at build time -
+not a separately-sourced image asset. It replaced an earlier icon file
+whose provenance couldn't be confirmed.
 
 ## Architecture
 
