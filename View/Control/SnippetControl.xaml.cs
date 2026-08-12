@@ -43,13 +43,22 @@ namespace ClipboardWizard.View.Control
         }
     }
 
+    /// <summary>
+    /// The tile's text label: description-or-content for Text snippets, description only
+    /// (possibly empty) for Image snippets, since their content isn't text at all.
+    /// </summary>
     internal class ContentConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not Snippet snippet || snippet.Type != SnippetType.Text)
+            if (value is not Snippet snippet)
             {
                 return string.Empty;
+            }
+
+            if (snippet.Type == SnippetType.Image)
+            {
+                return snippet.Description ?? string.Empty;
             }
 
             return string.IsNullOrEmpty(snippet.Description) ? snippet.Content : snippet.Description;
@@ -66,6 +75,19 @@ namespace ClipboardWizard.View.Control
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
             return value is byte[] bytes ? ImageCodec.DecodeToBitmapImage(bytes) : null;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    internal class IsNotEmptyConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            return !string.IsNullOrEmpty(value as string);
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

@@ -35,6 +35,42 @@ namespace ClipboardWizard.Tests.View
 
             Assert.Equal(string.Empty, result);
         }
+
+        [Fact]
+        public void Convert_ForImageSnippet_ReturnsDescriptionEvenThoughContentIsEmpty()
+        {
+            Snippet snippet = new() { Type = SnippetType.Image, Description = "a photo", Content = null };
+
+            object result = _converter.Convert(snippet, typeof(string), null, null!);
+
+            Assert.Equal("a photo", result);
+        }
+
+        [Fact]
+        public void Convert_ForImageSnippetWithNoDescription_ReturnsEmptyString()
+        {
+            Snippet snippet = new() { Type = SnippetType.Image, Description = null };
+
+            object result = _converter.Convert(snippet, typeof(string), null, null!);
+
+            Assert.Equal(string.Empty, result);
+        }
+    }
+
+    public class IsNotEmptyConverterTests
+    {
+        private readonly IsNotEmptyConverter _converter = new();
+
+        [Theory]
+        [InlineData(null, false)]
+        [InlineData("", false)]
+        [InlineData("text", true)]
+        public void Convert_ReflectsWhetherStringIsEmpty(string? value, bool expected)
+        {
+            object result = _converter.Convert(value!, typeof(bool), null, null!);
+
+            Assert.Equal(expected, result);
+        }
     }
 
     public class StyleConverterTests

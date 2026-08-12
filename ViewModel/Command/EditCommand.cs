@@ -1,4 +1,3 @@
-using ClipboardWizard.Model;
 using System;
 using System.Windows.Input;
 
@@ -21,11 +20,11 @@ namespace ClipboardWizard.ViewModel.Command
 
         // Editing is intentionally never gated by the lock: it isn't a single accidental
         // click away from destroying content the way delete is, so it doesn't need the
-        // same protection. It IS gated by content type: there's no sensible way to "edit" an
-        // image's pixels in a text box, so image snippets are delete-and-re-add only.
+        // same protection. Available for image snippets too - the dialog just won't offer
+        // to change the picture itself, only its description (see EditSnippetViewModel.Type).
         public bool CanExecute(object parameter)
         {
-            return _snippetViewModel.Snippet.Type == SnippetType.Text;
+            return true;
         }
 
         public async void Execute(object parameter)

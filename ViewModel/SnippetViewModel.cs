@@ -110,14 +110,6 @@ namespace ClipboardWizard.ViewModel
 
         internal async Task EditSnippetAsync()
         {
-            // Defense in depth: EditCommand.CanExecute already blocks this from the UI, but
-            // there's no sensible way to edit an image's pixels in a text box, so refuse it
-            // here too rather than trusting the command binding alone.
-            if (Snippet.Type != SnippetType.Text)
-            {
-                return;
-            }
-
             // The owner must be set before ShowDialog so the dialog centers over it and
             // stays modal to the correct window.
             Window owner = Application.Current.MainWindow;
@@ -139,11 +131,16 @@ namespace ClipboardWizard.ViewModel
             }
 
             Snippet.Description = editSnippetViewModel.Description;
-            Snippet.Content = editSnippetViewModel.Content;
+
+            // Only Text snippets have editable content; an Image snippet's picture never
+            // changes here, so its match-against-clipboard State can't have changed either.
+            if (Snippet.Type == SnippetType.Text)
+            {
+                Snippet.Content = editSnippetViewModel.Content;
+                State = string.Equals(Snippet.Content, _host.ClipboardText, StringComparison.Ordinal) ? State.Active : State.Inactive;
+            }
 
             await _host.UpdateSnippetAsync(Snippet);
-
-            State = Snippet.Content.Equals(_host.ClipboardText, StringComparison.Ordinal) ? State.Active : State.Inactive;
 
             OnPropertyChanged(nameof(Snippet));
         }

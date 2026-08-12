@@ -17,12 +17,14 @@ namespace ClipboardWizard.Tests.ViewModel.Command
         }
 
         [Fact]
-        public void CanExecute_FalseForImageSnippet()
+        public void CanExecute_TrueForImageSnippet()
         {
+            // Editing an image snippet is allowed - it just can't change the picture itself,
+            // only its description. See EditSnippetViewModelTests for the dialog-side rules.
             SnippetViewModel viewModel = new(new Snippet { Type = SnippetType.Image }, State.Inactive, new FakeSnippetHost());
             EditCommand command = new(viewModel);
 
-            Assert.False(command.CanExecute(null));
+            Assert.True(command.CanExecute(null));
         }
     }
 }

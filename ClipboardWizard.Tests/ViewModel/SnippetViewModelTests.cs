@@ -76,19 +76,11 @@ namespace ClipboardWizard.Tests.ViewModel
             Assert.Empty(host.UpdatedSnippets);
         }
 
-        [Fact]
-        public async Task EditSnippetAsync_ForImageSnippet_IsANoOp()
-        {
-            // EditCommand.CanExecute already blocks this from the UI; this checks the
-            // belt-and-braces guard inside SnippetViewModel itself.
-            FakeSnippetHost host = new();
-            Snippet snippet = new() { Type = SnippetType.Image, ImageData = [1, 2, 3] };
-            SnippetViewModel viewModel = new(snippet, State.Inactive, host);
-
-            await viewModel.EditSnippetAsync();
-
-            Assert.Empty(host.UpdatedSnippets);
-        }
+        // EditSnippetAsync itself isn't unit tested: it shows a real modal dialog via
+        // Application.Current.MainWindow, which needs a running WPF Application. The rules
+        // around what's editable per snippet type live in EditSnippetViewModel instead
+        // (EditSnippetViewModelTests), which is what EditSnippetAsync's post-dialog logic
+        // reads back from.
 
         [Fact]
         public async Task HandleLockAsync_ReProtectsAutomaticallyAfterTheUnlockWindow()

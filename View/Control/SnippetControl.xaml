@@ -71,6 +71,7 @@
         <local:StyleConverter x:Key="styleConverter"/>
         <local:ContentConverter x:Key="contentConverter"/>
         <local:ImageBytesConverter x:Key="imageConverter"/>
+        <local:IsNotEmptyConverter x:Key="isNotEmptyConverter"/>
     </UserControl.Resources>
 
     <Grid Height="150">
@@ -84,31 +85,56 @@
             </Button.Style>
             <Button.ContentTemplate>
                 <DataTemplate>
+                    <!-- Three states: Text snippets always show their label; Image snippets
+                         show the full thumbnail when there's no description, or the
+                         description plus a small image badge (so it's still clear this is a
+                         picture) when there is one. -->
                     <Grid>
-                        <TextBlock Text="{Binding Snippet, Converter={StaticResource contentConverter}}"
-                                   TextWrapping="Wrap" TextTrimming="CharacterEllipsis">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Snippet.Type}" Value="Image">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
                         <Image Source="{Binding Snippet.ImageData, Converter={StaticResource imageConverter}}" Stretch="Uniform">
                             <Image.Style>
                                 <Style TargetType="Image">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Snippet.Type}" Value="Image">
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Snippet.Type}" Value="Image" />
+                                                <Condition Binding="{Binding Snippet.Description, Converter={StaticResource isNotEmptyConverter}}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
                                             <Setter Property="Visibility" Value="Visible" />
-                                        </DataTrigger>
+                                        </MultiDataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </Image.Style>
                         </Image>
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Margin="4">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <MultiDataTrigger>
+                                            <MultiDataTrigger.Conditions>
+                                                <Condition Binding="{Binding Snippet.Type}" Value="Image" />
+                                                <Condition Binding="{Binding Snippet.Description, Converter={StaticResource isNotEmptyConverter}}" Value="False" />
+                                            </MultiDataTrigger.Conditions>
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </MultiDataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+                            <TextBlock Text="{Binding Snippet, Converter={StaticResource contentConverter}}"
+                                       TextWrapping="Wrap" TextTrimming="CharacterEllipsis" TextAlignment="Center" />
+                            <fa5:FontAwesome Icon="Solid_Image" Margin="0 6 0 0" HorizontalAlignment="Center" Foreground="Gray">
+                                <fa5:FontAwesome.Style>
+                                    <Style TargetType="fa5:FontAwesome">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Snippet.Type}" Value="Image">
+                                                <Setter Property="Visibility" Value="Visible" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </fa5:FontAwesome.Style>
+                            </fa5:FontAwesome>
+                        </StackPanel>
                     </Grid>
                 </DataTemplate>
             </Button.ContentTemplate>
@@ -124,42 +150,47 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <DockPanel VerticalAlignment="Bottom">
-                <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True">
-                    <ToolBar Background="DarkGray">
-                        <Button Command="{Binding Delete}" Background="Transparent" BorderThickness="0">
-                            <fa5:FontAwesome Icon="Solid_Trash" />
-                        </Button>
-                        <Button Command="{Binding Edit}" Background="Transparent" BorderThickness="0">
-                            <fa5:FontAwesome Icon="Solid_PencilAlt" />
-                        </Button>
-                        <Button Command="{Binding OrderHigher}" Background="Transparent" BorderThickness="0">
-                            <fa5:FontAwesome Icon="Solid_ArrowUp" />
-                        </Button>
-                        <Button Command="{Binding OrderLower}" Background="Transparent" BorderThickness="0">
-                            <fa5:FontAwesome Icon="Solid_ArrowDown" />
-                        </Button>
-                    </ToolBar>
-                </ToolBarTray>
-                <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True" HorizontalAlignment="Right">
+            <!-- Opaque light background behind the whole hover toolbar row: with image tiles
+                 now possible, the buttons could otherwise sit directly on a dark photo and
+                 lose contrast. -->
+            <Border VerticalAlignment="Bottom" Background="#E6FFFFFF" CornerRadius="4">
+                <DockPanel>
+                    <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True">
                         <ToolBar Background="DarkGray">
-                        <Button Command="{Binding Lock}" Background="Transparent" BorderThickness="0">
-                            <Button.Style>
-                                <Style TargetType="Button">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Protected}" Value="true">
-                                            <Setter Property="Template" Value="{StaticResource LockedIcon}" />
-                                        </DataTrigger>
-                                        <DataTrigger Binding="{Binding Protected}" Value="false">
-                                            <Setter Property="Template" Value="{StaticResource UnlockedIcon}" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Button.Style>
-                        </Button>
-                    </ToolBar>
-                </ToolBarTray>
-            </DockPanel>
+                            <Button Command="{Binding Delete}" Background="Transparent" BorderThickness="0">
+                                <fa5:FontAwesome Icon="Solid_Trash" />
+                            </Button>
+                            <Button Command="{Binding Edit}" Background="Transparent" BorderThickness="0">
+                                <fa5:FontAwesome Icon="Solid_PencilAlt" />
+                            </Button>
+                            <Button Command="{Binding OrderHigher}" Background="Transparent" BorderThickness="0">
+                                <fa5:FontAwesome Icon="Solid_ArrowUp" />
+                            </Button>
+                            <Button Command="{Binding OrderLower}" Background="Transparent" BorderThickness="0">
+                                <fa5:FontAwesome Icon="Solid_ArrowDown" />
+                            </Button>
+                        </ToolBar>
+                    </ToolBarTray>
+                    <ToolBarTray VerticalAlignment="Bottom" Background="Transparent" IsLocked="True" HorizontalAlignment="Right">
+                            <ToolBar Background="DarkGray">
+                            <Button Command="{Binding Lock}" Background="Transparent" BorderThickness="0">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Protected}" Value="true">
+                                                <Setter Property="Template" Value="{StaticResource LockedIcon}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Protected}" Value="false">
+                                                <Setter Property="Template" Value="{StaticResource UnlockedIcon}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+                        </ToolBar>
+                    </ToolBarTray>
+                </DockPanel>
+            </Border>
         </Grid>
     </Grid>
 

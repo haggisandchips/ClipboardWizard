@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using ClipboardWizard.Model;
+using ClipboardWizard.ViewModel;
+using System.Windows;
 
 namespace ClipboardWizard.View
 {
@@ -26,7 +28,8 @@ namespace ClipboardWizard.View
 
         private void Window_Activated(object sender, System.EventArgs e)
         {
-            ContentTextBox.Focus();
+            bool isText = DataContext is EditSnippetViewModel { Type: SnippetType.Text };
+            (isText ? ContentTextBox : DescriptionTextBox).Focus();
         }
     }
 }

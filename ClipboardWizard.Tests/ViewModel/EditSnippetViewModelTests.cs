@@ -16,17 +16,31 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
-        public void ExistingSnippet_IsNotNewAndUsesUpdateLabelAndCopiesFields()
+        public void ExistingTextSnippet_IsNotNewAndUsesUpdateLabelAndCopiesFields()
         {
-            Snippet snippet = new() { Description = "d", Content = "c" };
+            Snippet snippet = new() { Type = SnippetType.Text, Description = "d", Content = "c" };
 
             EditSnippetViewModel viewModel = new(snippet);
 
             Assert.False(viewModel.IsNew);
+            Assert.Equal(SnippetType.Text, viewModel.Type);
             Assert.Equal("Update", viewModel.ActionButtonText);
             Assert.Equal("Edit Snippet", viewModel.Title);
             Assert.Equal("d", viewModel.Description);
             Assert.Equal("c", viewModel.Content);
+        }
+
+        [Fact]
+        public void ExistingImageSnippet_CopiesDescriptionAndImageData_ButContentIsIrrelevant()
+        {
+            byte[] imageData = [1, 2, 3];
+            Snippet snippet = new() { Type = SnippetType.Image, Description = "a photo", ImageData = imageData };
+
+            EditSnippetViewModel viewModel = new(snippet);
+
+            Assert.Equal(SnippetType.Image, viewModel.Type);
+            Assert.Equal("a photo", viewModel.Description);
+            Assert.Equal(imageData, viewModel.ImageData);
         }
 
         [Theory]
@@ -34,7 +48,7 @@ namespace ClipboardWizard.Tests.ViewModel
         [InlineData("", false)]
         [InlineData("   ", false)]
         [InlineData("content", true)]
-        public void IsValid_ReflectsWhetherContentIsBlank(string? content, bool expected)
+        public void IsValid_ForTextSnippet_ReflectsWhetherContentIsBlank(string? content, bool expected)
         {
             EditSnippetViewModel viewModel = new()
             {
@@ -42,6 +56,17 @@ namespace ClipboardWizard.Tests.ViewModel
             };
 
             Assert.Equal(expected, viewModel.IsValid);
+        }
+
+        [Fact]
+        public void IsValid_ForImageSnippet_IsAlwaysTrue()
+        {
+            // There's nothing to validate for an image edit - only the (optional)
+            // description changes, never the content.
+            Snippet snippet = new() { Type = SnippetType.Image, ImageData = [1] };
+            EditSnippetViewModel viewModel = new(snippet);
+
+            Assert.True(viewModel.IsValid);
         }
     }
 }
