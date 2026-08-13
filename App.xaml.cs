@@ -28,8 +28,17 @@ namespace ClipboardWizard
 
         private async void Application_Startup(object sender, StartupEventArgs e)
         {
+            UpdateManager updateManager = new(new GithubSource(ReleaseRepoUrl, null, false));
+
             string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string applicationName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+            if (!updateManager.IsInstalled)
+            {
+                // Running from a plain dotnet build/publish, not a Velopack install - use a
+                // separate data folder so local development (e.g. schema changes) can't
+                // touch the real installed app's database.
+                applicationName += ".Dev";
+            }
             string localAppPath = Path.Combine(folderPath, applicationName);
 
             Logger.LogPath = Path.Combine(localAppPath, "error.log");
@@ -52,7 +61,7 @@ namespace ClipboardWizard
 
                 // Fire-and-forget: an update check is a nice-to-have, not something that
                 // should delay startup or take the app down if the network is unavailable.
-                _ = CheckForUpdatesAsync();
+                _ = CheckForUpdatesAsync(updateManager);
             }
             catch (Exception ex)
             {
@@ -68,12 +77,10 @@ namespace ClipboardWizard
             }
         }
 
-        private static async Task CheckForUpdatesAsync()
+        private static async Task CheckForUpdatesAsync(UpdateManager manager)
         {
             try
             {
-                UpdateManager manager = new(new GithubSource(ReleaseRepoUrl, null, false));
-
                 if (!manager.IsInstalled)
                 {
                     // Running from a plain dotnet build/publish, not a Velopack install -
