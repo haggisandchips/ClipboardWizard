@@ -11,10 +11,6 @@ namespace ClipboardWizard.Tests.Fakes
 
         public List<SnippetViewModel> RemovedSnippets { get; } = new();
 
-        public List<SnippetViewModel> MovedUp { get; } = new();
-
-        public List<SnippetViewModel> MovedDown { get; } = new();
-
         public List<(SnippetViewModel Snippet, SnippetViewModel Target, bool InsertBefore)> MovedTo { get; } = new();
 
         public Task UpdateSnippetAsync(Snippet snippet)
@@ -26,18 +22,6 @@ namespace ClipboardWizard.Tests.Fakes
         public Task RemoveSnippetAsync(SnippetViewModel snippetViewModel)
         {
             RemovedSnippets.Add(snippetViewModel);
-            return Task.CompletedTask;
-        }
-
-        public Task MoveSnippetUpAsync(SnippetViewModel snippetViewModel)
-        {
-            MovedUp.Add(snippetViewModel);
-            return Task.CompletedTask;
-        }
-
-        public Task MoveSnippetDownAsync(SnippetViewModel snippetViewModel)
-        {
-            MovedDown.Add(snippetViewModel);
             return Task.CompletedTask;
         }
 

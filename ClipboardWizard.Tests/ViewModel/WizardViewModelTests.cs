@@ -16,7 +16,7 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
-        public async Task LoadAsync_PopulatesSnippetsInOrder_AndFlagsFirstAndLast()
+        public async Task LoadAsync_PopulatesSnippetsInOrder()
         {
             var (viewModel, repository, _) = CreateSut();
             repository.Snippets.Add(new Snippet { Id = 1, Content = "b", Order = 1 });
@@ -26,10 +26,6 @@ namespace ClipboardWizard.Tests.ViewModel
             await viewModel.LoadAsync();
 
             Assert.Equal(new[] { "a", "b", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
-            Assert.True(viewModel.SnippetViewModels[0].First);
-            Assert.False(viewModel.SnippetViewModels[1].First);
-            Assert.True(viewModel.SnippetViewModels[2].Last);
-            Assert.False(viewModel.SnippetViewModels[1].Last);
         }
 
         [Fact]
@@ -194,7 +190,7 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
-        public async Task RemoveSnippetAsync_DeletesPersistsAndRecomputesEdgeFlags()
+        public async Task RemoveSnippetAsync_DeletesAndPersists()
         {
             var (viewModel, repository, _) = CreateSut();
             repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
@@ -206,56 +202,7 @@ namespace ClipboardWizard.Tests.ViewModel
 
             SnippetViewModel remaining = Assert.Single(viewModel.SnippetViewModels);
             Assert.Equal("b", remaining.Snippet.Content);
-            Assert.True(remaining.First);
-            Assert.True(remaining.Last);
             Assert.Equal(1, repository.DeleteCount);
-        }
-
-        [Fact]
-        public async Task MoveSnippetUpAsync_SwapsOrderInCollectionAndPersistsBothSides()
-        {
-            var (viewModel, repository, _) = CreateSut();
-            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
-            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
-            await viewModel.LoadAsync();
-            SnippetViewModel second = viewModel.SnippetViewModels[1];
-
-            await viewModel.MoveSnippetUpAsync(second);
-
-            Assert.Equal(new[] { "b", "a" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
-            Assert.True(viewModel.SnippetViewModels[0].First);
-            Assert.True(viewModel.SnippetViewModels[1].Last);
-            Assert.Equal(2, repository.UpdateCount);
-        }
-
-        [Fact]
-        public async Task MoveSnippetUpAsync_AtTop_IsNoOp()
-        {
-            var (viewModel, repository, _) = CreateSut();
-            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
-            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
-            await viewModel.LoadAsync();
-            SnippetViewModel first = viewModel.SnippetViewModels[0];
-
-            await viewModel.MoveSnippetUpAsync(first);
-
-            Assert.Equal(new[] { "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
-            Assert.Equal(0, repository.UpdateCount);
-        }
-
-        [Fact]
-        public async Task MoveSnippetDownAsync_AtBottom_IsNoOp()
-        {
-            var (viewModel, repository, _) = CreateSut();
-            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
-            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
-            await viewModel.LoadAsync();
-            SnippetViewModel last = viewModel.SnippetViewModels[1];
-
-            await viewModel.MoveSnippetDownAsync(last);
-
-            Assert.Equal(new[] { "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
-            Assert.Equal(0, repository.UpdateCount);
         }
 
         [Fact]
@@ -273,8 +220,6 @@ namespace ClipboardWizard.Tests.ViewModel
 
             Assert.Equal(new[] { "c", "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
             Assert.Equal(new[] { 0, 1, 2 }, viewModel.SnippetViewModels.Select(s => s.Snippet.Order));
-            Assert.True(viewModel.SnippetViewModels[0].First);
-            Assert.True(viewModel.SnippetViewModels[2].Last);
         }
 
         [Fact]

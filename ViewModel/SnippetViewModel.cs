@@ -53,28 +53,6 @@ namespace ClipboardWizard.ViewModel
             }
         }
 
-        private bool _first;
-        public bool First
-        {
-            get => _first;
-            set
-            {
-                _first = value;
-                OnPropertyChanged(nameof(First));
-            }
-        }
-
-        private bool _last;
-        public bool Last
-        {
-            get => _last;
-            set
-            {
-                _last = value;
-                OnPropertyChanged(nameof(Last));
-            }
-        }
-
         public CopyCommand Copy { get; } = new();
 
         public DeleteCommand Delete { get; }
@@ -82,10 +60,6 @@ namespace ClipboardWizard.ViewModel
         public LockCommand Lock { get; }
 
         public EditCommand Edit { get; }
-
-        public OrderHigherCommand OrderHigher { get; }
-
-        public OrderLowerCommand OrderLower { get; }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
@@ -98,8 +72,6 @@ namespace ClipboardWizard.ViewModel
 
             Delete = new(this);
             Edit = new(this);
-            OrderHigher = new(this);
-            OrderLower = new(this);
             Lock = new(this);
         }
 
@@ -143,16 +115,6 @@ namespace ClipboardWizard.ViewModel
             await _host.UpdateSnippetAsync(Snippet);
 
             OnPropertyChanged(nameof(Snippet));
-        }
-
-        internal Task OrderSnippetHigherAsync()
-        {
-            return _host.MoveSnippetUpAsync(this);
-        }
-
-        internal Task OrderSnippetLowerAsync()
-        {
-            return _host.MoveSnippetDownAsync(this);
         }
 
         /// <summary>Drag-and-drop reordering: moves this snippet immediately before/after <paramref name="target"/>.</summary>

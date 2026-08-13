@@ -62,8 +62,6 @@ namespace ClipboardWizard.ViewModel
                 State state = Matches(snippet, current) ? State.Active : State.Inactive;
                 SnippetViewModels.Add(new SnippetViewModel(snippet, state, this));
             }
-
-            RefreshEdgeFlags();
         }
 
         internal async Task AddNewSnippetAsync()
@@ -146,7 +144,6 @@ namespace ClipboardWizard.ViewModel
 
             State state = Matches(snippet, _clipboardMonitor.CurrentContent) ? State.Active : State.Inactive;
             SnippetViewModels.Add(new SnippetViewModel(snippet, state, this));
-            RefreshEdgeFlags();
         }
 
         private static bool IsSaveable(ClipboardContent content)
@@ -186,34 +183,6 @@ namespace ClipboardWizard.ViewModel
         {
             await _repository.DeleteSnippetAsync(snippetViewModel.Snippet);
             SnippetViewModels.Remove(snippetViewModel);
-            RefreshEdgeFlags();
-        }
-
-        public Task MoveSnippetUpAsync(SnippetViewModel snippetViewModel) => MoveAsync(snippetViewModel, -1);
-
-        public Task MoveSnippetDownAsync(SnippetViewModel snippetViewModel) => MoveAsync(snippetViewModel, +1);
-
-        private async Task MoveAsync(SnippetViewModel snippetViewModel, int offset)
-        {
-            int currentIndex = SnippetViewModels.IndexOf(snippetViewModel);
-            int otherIndex = currentIndex + offset;
-
-            if (currentIndex < 0 || otherIndex < 0 || otherIndex >= SnippetViewModels.Count)
-            {
-                return;
-            }
-
-            SnippetViewModel other = SnippetViewModels[otherIndex];
-
-            (snippetViewModel.Snippet.Order, other.Snippet.Order) = (other.Snippet.Order, snippetViewModel.Snippet.Order);
-
-            await _repository.UpdateSnippetAsync(snippetViewModel.Snippet);
-            await _repository.UpdateSnippetAsync(other.Snippet);
-
-            SnippetViewModels[currentIndex] = other;
-            SnippetViewModels[otherIndex] = snippetViewModel;
-
-            RefreshEdgeFlags();
         }
 
         public async Task MoveSnippetToAsync(SnippetViewModel snippetViewModel, SnippetViewModel targetSnippetViewModel, bool insertBefore)
@@ -259,17 +228,6 @@ namespace ClipboardWizard.ViewModel
                 }
             }
             await Task.WhenAll(updates);
-
-            RefreshEdgeFlags();
-        }
-
-        private void RefreshEdgeFlags()
-        {
-            for (int i = 0; i < SnippetViewModels.Count; i++)
-            {
-                SnippetViewModels[i].First = i == 0;
-                SnippetViewModels[i].Last = i == SnippetViewModels.Count - 1;
-            }
         }
 
         private int GetNextOrder()

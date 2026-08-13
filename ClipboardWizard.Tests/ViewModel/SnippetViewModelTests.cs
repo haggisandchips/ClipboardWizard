@@ -27,28 +27,6 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
-        public async Task OrderSnippetHigherAsync_DelegatesToHost()
-        {
-            FakeSnippetHost host = new();
-            SnippetViewModel viewModel = new(new Snippet(), State.Inactive, host);
-
-            await viewModel.OrderSnippetHigherAsync();
-
-            Assert.Single(host.MovedUp, viewModel);
-        }
-
-        [Fact]
-        public async Task OrderSnippetLowerAsync_DelegatesToHost()
-        {
-            FakeSnippetHost host = new();
-            SnippetViewModel viewModel = new(new Snippet(), State.Inactive, host);
-
-            await viewModel.OrderSnippetLowerAsync();
-
-            Assert.Single(host.MovedDown, viewModel);
-        }
-
-        [Fact]
         public async Task MoveToAsync_DelegatesToHostWithSelfTargetAndSide()
         {
             FakeSnippetHost host = new();
