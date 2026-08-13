@@ -5,6 +5,16 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-13
+
+### Fixed
+
+- Changing a snippet's category via the Edit dialog now actually moves it
+  in the accordion. Previously the tile stayed under its old category
+  until you dragged it - and since its category was already set to the
+  new one, that drag silently did nothing either, forcing a
+  clear-then-drag workaround.
+
 ## [1.2.0] - 2026-08-13
 
 ### Added
