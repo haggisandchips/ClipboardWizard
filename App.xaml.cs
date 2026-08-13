@@ -49,14 +49,13 @@ namespace ClipboardWizard
 
                 ISnippetRepository repository = new SnippetRepository(databasePath);
                 IClipboardMonitor clipboardMonitor = new SharpClipboardMonitor(new SharpClipboard());
+                IWindowSettingsService windowSettingsService = new WindowSettingsService(
+                    Path.Combine(localAppPath, "WindowSettings.json"));
 
                 WizardViewModel viewModel = new(repository, clipboardMonitor);
                 await viewModel.LoadAsync();
 
-                WizardView wizardView = new(viewModel)
-                {
-                    WindowStartupLocation = WindowStartupLocation.CenterScreen
-                };
+                WizardView wizardView = new(viewModel, windowSettingsService);
                 wizardView.Show();
 
                 // Fire-and-forget: an update check is a nice-to-have, not something that

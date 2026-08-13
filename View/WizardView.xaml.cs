@@ -1,8 +1,11 @@
+using ClipboardWizard.Model;
+using ClipboardWizard.Service;
 using ClipboardWizard.View.Control;
 using ClipboardWizard.ViewModel;
 using ClipboardWizard.ViewModel.Command;
 using System;
 using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -16,12 +19,14 @@ namespace ClipboardWizard.View
     public partial class WizardView
     {
         private readonly WizardViewModel _viewModel;
+        private readonly IWindowSettingsService _windowSettingsService;
 
         public UniformGrid SnippetsUniformGrid { get; private set; }
 
-        public WizardView(WizardViewModel viewModel)
+        public WizardView(WizardViewModel viewModel, IWindowSettingsService windowSettingsService)
         {
             _viewModel = viewModel;
+            _windowSettingsService = windowSettingsService;
 
             InitializeComponent();
 
@@ -29,6 +34,59 @@ namespace ClipboardWizard.View
             RightWindowCommandsHost.DataContext = _viewModel;
 
             _viewModel.SnippetViewModels.CollectionChanged += Snippets_CollectionChanged;
+
+            ApplyWindowSettings(_windowSettingsService.Load());
+            Closing += WizardView_Closing;
+        }
+
+        private void ApplyWindowSettings(WindowSettings settings)
+        {
+            if (settings == null || settings.Width <= 0 || settings.Height <= 0)
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                return;
+            }
+
+            // A saved position can fall outside the current display area if a monitor was
+            // disconnected or resolution changed since the last run - fall back to centering
+            // rather than placing the window somewhere unreachable.
+            Rect virtualScreen = new(
+                SystemParameters.VirtualScreenLeft,
+                SystemParameters.VirtualScreenTop,
+                SystemParameters.VirtualScreenWidth,
+                SystemParameters.VirtualScreenHeight);
+            Rect windowBounds = new(settings.Left, settings.Top, settings.Width, settings.Height);
+
+            if (!virtualScreen.IntersectsWith(windowBounds))
+            {
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                return;
+            }
+
+            WindowStartupLocation = WindowStartupLocation.Manual;
+            Left = settings.Left;
+            Top = settings.Top;
+            Width = settings.Width;
+            Height = settings.Height;
+
+            if (settings.IsMaximized)
+            {
+                WindowState = WindowState.Maximized;
+            }
+        }
+
+        private void WizardView_Closing(object sender, CancelEventArgs e)
+        {
+            Rect bounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
+
+            _windowSettingsService.Save(new WindowSettings
+            {
+                Left = bounds.Left,
+                Top = bounds.Top,
+                Width = bounds.Width,
+                Height = bounds.Height,
+                IsMaximized = WindowState == WindowState.Maximized
+            });
         }
 
         private void Snippets_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
