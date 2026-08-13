@@ -9,10 +9,17 @@ namespace ClipboardWizard.Tests.ViewModel
     {
         private static (WizardViewModel ViewModel, FakeSnippetRepository Repository, FakeClipboardMonitor Clipboard) CreateSut()
         {
-            FakeSnippetRepository repository = new();
-            FakeClipboardMonitor clipboard = new();
-            WizardViewModel viewModel = new(repository, clipboard);
+            var (viewModel, repository, _, clipboard) = CreateSutWithCategories();
             return (viewModel, repository, clipboard);
+        }
+
+        private static (WizardViewModel ViewModel, FakeSnippetRepository Repository, FakeCategoryRepository CategoryRepository, FakeClipboardMonitor Clipboard) CreateSutWithCategories()
+        {
+            FakeSnippetRepository repository = new();
+            FakeCategoryRepository categoryRepository = new();
+            FakeClipboardMonitor clipboard = new();
+            WizardViewModel viewModel = new(repository, categoryRepository, clipboard);
+            return (viewModel, repository, categoryRepository, clipboard);
         }
 
         [Fact]
@@ -26,6 +33,21 @@ namespace ClipboardWizard.Tests.ViewModel
             await viewModel.LoadAsync();
 
             Assert.Equal(new[] { "a", "b", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+        }
+
+        [Fact]
+        public async Task LoadAsync_PutsSnippetsIntoTheirCategoryBuckets()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "categorized", Order = 0, CategoryId = 1 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "uncategorized", Order = 0, CategoryId = null });
+
+            await viewModel.LoadAsync();
+
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            Assert.Equal("categorized", Assert.Single(category.Snippets).Snippet.Content);
+            Assert.Equal("uncategorized", Assert.Single(viewModel.UncategorizedSection.Snippets).Snippet.Content);
         }
 
         [Fact]
@@ -218,25 +240,25 @@ namespace ClipboardWizard.Tests.ViewModel
 
             await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: true);
 
-            Assert.Equal(new[] { "c", "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
-            Assert.Equal(new[] { 0, 1, 2 }, viewModel.SnippetViewModels.Select(s => s.Snippet.Order));
+            Assert.Equal(new[] { "c", "a", "b" }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { 0, 1, 2 }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Order));
         }
 
         [Fact]
-        public async Task WouldReorder_OnItself_IsFalse()
+        public async Task WouldMoveSnippet_OnItself_IsFalse()
         {
             var (viewModel, repository, _) = CreateSut();
             repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
             await viewModel.LoadAsync();
             SnippetViewModel snippet = viewModel.SnippetViewModels[0];
 
-            Assert.False(viewModel.WouldReorder(snippet, snippet, insertBefore: true));
+            Assert.False(viewModel.WouldMoveSnippet(snippet, snippet, insertBefore: true));
         }
 
         [Theory]
         [InlineData(true)] // dropping on the left half of your own immediate successor...
         [InlineData(false)] // ...or the right half of your own immediate predecessor
-        public async Task WouldReorder_ForItsOwnCurrentPosition_IsFalse(bool insertBefore)
+        public async Task WouldMoveSnippet_ForItsOwnCurrentPosition_IsFalse(bool insertBefore)
         {
             var (viewModel, repository, _) = CreateSut();
             repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
@@ -246,11 +268,11 @@ namespace ClipboardWizard.Tests.ViewModel
             SnippetViewModel middle = viewModel.SnippetViewModels[1]; // "b"
             SnippetViewModel target = insertBefore ? viewModel.SnippetViewModels[2] : viewModel.SnippetViewModels[0];
 
-            Assert.False(viewModel.WouldReorder(middle, target, insertBefore));
+            Assert.False(viewModel.WouldMoveSnippet(middle, target, insertBefore));
         }
 
         [Fact]
-        public async Task WouldReorder_ForADifferentPosition_IsTrue()
+        public async Task WouldMoveSnippet_ForADifferentPositionInTheSameCategory_IsTrue()
         {
             var (viewModel, repository, _) = CreateSut();
             repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
@@ -260,7 +282,24 @@ namespace ClipboardWizard.Tests.ViewModel
             SnippetViewModel dragged = viewModel.SnippetViewModels[2]; // "c"
             SnippetViewModel target = viewModel.SnippetViewModels[0]; // "a"
 
-            Assert.True(viewModel.WouldReorder(dragged, target, insertBefore: true));
+            Assert.True(viewModel.WouldMoveSnippet(dragged, target, insertBefore: true));
+        }
+
+        [Fact]
+        public async Task WouldMoveSnippet_ForADifferentCategory_IsAlwaysTrue()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = null });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 0, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            SnippetViewModel uncategorized = viewModel.SnippetViewModels.Single(s => s.Snippet.Content == "a");
+            SnippetViewModel categorized = viewModel.SnippetViewModels.Single(s => s.Snippet.Content == "b");
+
+            // Even dropping on the near side of the only item already in that category -
+            // which would be a no-op for a same-category drop - is still a real change here,
+            // since it also recategorizes.
+            Assert.True(viewModel.WouldMoveSnippet(uncategorized, categorized, insertBefore: true));
         }
 
         [Fact]
@@ -276,7 +315,7 @@ namespace ClipboardWizard.Tests.ViewModel
 
             await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: false);
 
-            Assert.Equal(new[] { "b", "c", "a" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { "b", "c", "a" }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Content));
         }
 
         [Fact]
@@ -298,7 +337,7 @@ namespace ClipboardWizard.Tests.ViewModel
 
             await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: true);
 
-            Assert.Equal(new[] { "b", "a", "c", "d" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { "b", "a", "c", "d" }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Content));
         }
 
         [Fact]
@@ -317,7 +356,7 @@ namespace ClipboardWizard.Tests.ViewModel
 
             await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: false);
 
-            Assert.Equal(new[] { "a", "b", "d", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { "a", "b", "d", "c" }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Content));
         }
 
         [Fact]
@@ -335,7 +374,7 @@ namespace ClipboardWizard.Tests.ViewModel
 
             await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: true);
 
-            Assert.Equal(new[] { "a", "b", "d", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { "a", "b", "d", "c" }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Content));
             Assert.Equal(2, repository.UpdateCount);
         }
 
@@ -350,7 +389,7 @@ namespace ClipboardWizard.Tests.ViewModel
 
             await viewModel.MoveSnippetToAsync(first, first, insertBefore: true);
 
-            Assert.Equal(new[] { "a", "b" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { "a", "b" }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Content));
             Assert.Equal(0, repository.UpdateCount);
         }
 
@@ -369,8 +408,144 @@ namespace ClipboardWizard.Tests.ViewModel
 
             await viewModel.MoveSnippetToAsync(middle, target, insertBefore);
 
-            Assert.Equal(new[] { "a", "b", "c" }, viewModel.SnippetViewModels.Select(s => s.Snippet.Content));
+            Assert.Equal(new[] { "a", "b", "c" }, viewModel.UncategorizedSection.Snippets.Select(s => s.Snippet.Content));
             Assert.Equal(0, repository.UpdateCount);
+        }
+
+        [Fact]
+        public async Task MoveSnippetToAsync_AcrossCategories_RecategorizesAndPositionsNearTarget()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = null });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 0, CategoryId = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 1, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            SnippetViewModel dragged = viewModel.UncategorizedSection.Snippets.Single(s => s.Snippet.Content == "a");
+            SnippetViewModel target = viewModel.Categories[0].Snippets.Single(s => s.Snippet.Content == "c");
+
+            await viewModel.MoveSnippetToAsync(dragged, target, insertBefore: true);
+
+            Assert.Empty(viewModel.UncategorizedSection.Snippets);
+            Assert.Equal(new[] { "b", "a", "c" }, viewModel.Categories[0].Snippets.Select(s => s.Snippet.Content));
+            Assert.Equal(1, dragged.Snippet.CategoryId);
+        }
+
+        [Fact]
+        public async Task AddCategoryAsync_PersistsAndAddsToCategories()
+        {
+            var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();
+
+            await viewModel.AddCategoryAsync("Work");
+
+            CategoryViewModel added = Assert.Single(viewModel.Categories);
+            Assert.Equal("Work", added.Category.Name);
+            Assert.Equal(1, categoryRepository.SaveCount);
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("")]
+        [InlineData("   ")]
+        public async Task AddCategoryAsync_WithBlankName_IsNoOp(string? name)
+        {
+            var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();
+
+            await viewModel.AddCategoryAsync(name!);
+
+            Assert.Empty(viewModel.Categories);
+            Assert.Equal(0, categoryRepository.SaveCount);
+        }
+
+        [Fact]
+        public async Task DeleteCategoryAsync_RemovesCategoryAndUncategorizesItsSnippets()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1, CategoryId = null });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+
+            await viewModel.DeleteCategoryAsync(category);
+
+            Assert.Empty(viewModel.Categories);
+            Assert.Equal(1, categoryRepository.DeleteCount);
+            Assert.All(viewModel.SnippetViewModels, s => Assert.Null(s.Snippet.CategoryId));
+            Assert.Equal(2, viewModel.UncategorizedSection.Snippets.Count);
+        }
+
+        [Fact]
+        public async Task AssignCategoryAsync_SetsCategoryIdAndPersists()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            SnippetViewModel snippet = Assert.Single(viewModel.SnippetViewModels);
+
+            await viewModel.AssignCategoryAsync(snippet, category);
+
+            Assert.Equal(1, snippet.Snippet.CategoryId);
+            Assert.Equal(1, repository.UpdateCount);
+        }
+
+        [Fact]
+        public async Task AssignCategoryAsync_ToUncategorizedSection_ClearsCategoryId()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            SnippetViewModel snippet = Assert.Single(viewModel.SnippetViewModels);
+
+            await viewModel.AssignCategoryAsync(snippet, viewModel.UncategorizedSection);
+
+            Assert.Null(snippet.Snippet.CategoryId);
+            Assert.Contains(snippet, viewModel.UncategorizedSection.Snippets);
+            Assert.Equal(1, repository.UpdateCount);
+        }
+
+        [Fact]
+        public async Task AssignCategoryAsync_ToItsCurrentCategory_IsNoOp()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            SnippetViewModel snippet = Assert.Single(viewModel.SnippetViewModels);
+
+            await viewModel.AssignCategoryAsync(snippet, category);
+
+            Assert.Equal(0, repository.UpdateCount);
+        }
+
+        [Fact]
+        public async Task MoveCategoryToAsync_ReordersAndRenumbersOrderToMatchNewPositions()
+        {
+            var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();
+            await viewModel.AddCategoryAsync("a");
+            await viewModel.AddCategoryAsync("b");
+            await viewModel.AddCategoryAsync("c");
+            CategoryViewModel dragged = viewModel.Categories[2]; // "c"
+            CategoryViewModel target = viewModel.Categories[0]; // "a"
+
+            await viewModel.MoveCategoryToAsync(dragged, target, insertBefore: true);
+
+            Assert.Equal(new[] { "c", "a", "b" }, viewModel.Categories.Select(c => c.Category.Name));
+            Assert.Equal(new[] { 0, 1, 2 }, viewModel.Categories.Select(c => c.Category.Order));
+        }
+
+        [Fact]
+        public async Task WouldReorderCategory_OnItself_IsFalse()
+        {
+            var (viewModel, _, _, _) = CreateSutWithCategories();
+            await viewModel.AddCategoryAsync("a");
+            CategoryViewModel category = viewModel.Categories[0];
+
+            Assert.False(viewModel.WouldReorderCategory(category, category, insertBefore: true));
         }
     }
 }

@@ -48,42 +48,51 @@
                 </Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding AddSnippet}" Focusable="False" Content="New"></Button>
+                <Button Command="{Binding AddCategory}" Focusable="False" Content="New Category" Margin="0 0 5 0" />
+                <Button Command="{Binding AddSnippet}" Focusable="False" Content="New Snippet" />
             </StackPanel>
         </DockPanel>
-        <Grid Margin="5"
-              AllowDrop="True"
-              DragOver="SnippetsHost_DragOver"
-              DragLeave="SnippetsHost_DragLeave"
-              Drop="SnippetsHost_Drop">
-            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" >
-                <ItemsControl ItemsSource="{Binding SnippetViewModels}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <UniformGrid x:Name="SnippetsUniformGrid"
-                                         VerticalAlignment="Top"
-                                         Loaded="SnippetsUniformGrid_Loaded"/>
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <uc:SnippetControl />
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
-            <!-- One shared indicator for the whole tile area, positioned over whichever tile
-                 boundary is currently the drop target - not one per tile, since the seam
-                 between two tiles is a single insertion point regardless of which side it's
-                 approached from. IsHitTestVisible=False so it never blocks the drag events
-                 this Grid needs to keep receiving. -->
-            <Canvas x:Name="IndicatorCanvas" IsHitTestVisible="False">
-                <Border x:Name="DropIndicator"
-                        Width="4"
-                        Background="DodgerBlue"
-                        Visibility="Collapsed" />
-            </Canvas>
-        </Grid>
+        <DockPanel Margin="5">
+            <!-- One shared host for the whole accordion: both category-row reordering and
+                 snippet drag/drop (reorder within a section, or drag onto another section to
+                 recategorize) route through this single Grid's handlers, branching on the drag
+                 payload's format, rather than each CategorySectionControl/SnippetControl
+                 tracking its own drop target - see CategorySectionControl's XAML comment. -->
+            <Grid AllowDrop="True"
+                  DragOver="AccordionHost_DragOver"
+                  DragLeave="AccordionHost_DragLeave"
+                  Drop="AccordionHost_Drop">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding Categories}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <uc:CategorySectionControl />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <!-- Always last, and not part of the reorderable ItemsControl above -
+                             see WizardViewModel.UncategorizedSection. -->
+                        <uc:CategorySectionControl DataContext="{Binding UncategorizedSection}" />
+                    </StackPanel>
+                </ScrollViewer>
+                <!-- Vertical bar: which side of a snippet tile a dragged snippet will land on. -->
+                <Canvas x:Name="SnippetIndicatorCanvas" IsHitTestVisible="False">
+                    <Border x:Name="SnippetDropIndicator"
+                            Width="4"
+                            Background="DodgerBlue"
+                            Visibility="Collapsed" />
+                </Canvas>
+                <!-- Horizontal bar: same idea, for a dragged category row - above/below the
+                     hovered section instead of left/right of a tile. -->
+                <Canvas x:Name="CategoryIndicatorCanvas" IsHitTestVisible="False">
+                    <Border x:Name="CategoryDropIndicator"
+                            Height="3"
+                            Background="DodgerBlue"
+                            Visibility="Collapsed" />
+                </Canvas>
+            </Grid>
+        </DockPanel>
     </DockPanel>
 
 </mah:MetroWindow>

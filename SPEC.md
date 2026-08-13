@@ -25,9 +25,12 @@ update snippets' Active/Inactive highlighting.
 **Manual add.** Two ways to add a snippet without recording:
 - The **+** button saves the current clipboard content (text or image) as
   a new snippet.
-- The **New** button opens a dialog to type a description and text content
-  directly (does not require anything to be on the clipboard). Text only —
-  there's no dialog-based way to hand-author an image snippet.
+- The **New Snippet** button opens a dialog to type a description and text
+  content directly (does not require anything to be on the clipboard).
+  Text only — there's no dialog-based way to hand-author an image snippet.
+
+The **New Category** button (to New Snippet's left) opens the equivalent
+dialog for creating a category: just a name.
 
 **Snippet tile.** Each saved text snippet is shown as a tile displaying its
 description if set, otherwise its raw content. Each saved image snippet
@@ -51,17 +54,39 @@ over a dark image thumbnail.
   only the description is editable — there's no sensible way to "edit" a
   picture's pixels in a text box, so replacing the image itself still means
   delete and copy/save a new one.
-- **Move up / Move down** — reorders the snippet in the list. Disabled at
-  the top/bottom of the list respectively.
 - **Lock** — see below.
 
-A snippet tile can also be **dragged and dropped onto another tile** to
-move it directly to that position in one step, as an alternative to
-repeated Move up/down clicks. A thin blue line on the left or right edge of
-the tile being hovered over shows where the dragged tile will land -
-hovering the left half inserts before that tile, the right half inserts
-after, regardless of which direction it was dragged from. Dropping a tile
-onto itself does nothing.
+A snippet tile is reordered by **dragging and dropping it onto another
+tile** - drag-and-drop is the only reordering mechanism. A thin blue line on
+the left or right edge of the tile being hovered over shows where the
+dragged tile will land - hovering the left half inserts before that tile,
+the right half inserts after, regardless of which direction it was dragged
+from. The indicator (and the drop itself) is suppressed for a position that
+wouldn't actually move the tile - dropping it on itself, or on the near
+side of its immediate neighbour on either side.
+
+**Categories.** Snippets are organized into user-defined categories, shown
+as an accordion: each category is a full-width, expandable/collapsible
+section containing that category's snippet tiles. The pinned
+**Uncategorized** section always comes last, holds any snippet with no
+category, and can't be deleted or reordered.
+- **Create** — the **New Category** button (see Manual add, above) opens
+  a dialog for just a name.
+- **Delete** — click the trash icon on a category's header. This isn't a
+  single click: a confirmation prompt must be accepted first. Deleting a
+  category never deletes its snippets - they move to Uncategorized instead.
+- **Expand/collapse** — click a section's header (anywhere except the trash
+  icon). Real categories persist this immediately; Uncategorized's state is
+  saved with the window's other leftover placement on close.
+- **Assign** — the New/Edit snippet dialog has a Category dropdown
+  (defaulting to "(none)"). A snippet can also be assigned by dragging its
+  tile onto another section's header or empty body (which highlights blue
+  to show it's the target, then appends the snippet there), or directly
+  onto one of that section's tiles to both move it there and position it
+  precisely, in one gesture.
+- **Reorder** — category sections are reordered by dragging one section
+  onto another (anywhere in its bounds, not just the header), with the same
+  drop-indicator and no-op-suppression behaviour as snippet tiles.
 
 **Locking.** A snippet can be permanently protected from deletion:
 1. Clicking the lock icon on an unprotected snippet locks it permanently.
@@ -90,11 +115,3 @@ all when running a non-installed (development) build.
 - No search/filter over snippets.
 - No clipboard formats other than plain text and images (rich text, files,
   and anything else are ignored).
-
-## Planned
-
-Not yet implemented. Noted here so current design decisions don't
-foreclose them:
-
-- **Categories** — organizing snippets into user-defined groups/categories
-  rather than a single flat list.

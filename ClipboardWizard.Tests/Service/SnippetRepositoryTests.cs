@@ -95,6 +95,28 @@ namespace ClipboardWizard.Tests.Service
         }
 
         [Fact]
+        public async Task CategoryId_RoundTrips()
+        {
+            Snippet snippet = new() { Content = "categorized", Order = 0, CategoryId = 42 };
+
+            await _repository.SaveSnippetAsync(snippet);
+            Snippet loaded = Assert.Single(await _repository.LoadSnippetsAsync());
+
+            Assert.Equal(42, loaded.CategoryId);
+        }
+
+        [Fact]
+        public async Task CategoryId_DefaultsToNull()
+        {
+            Snippet snippet = new() { Content = "uncategorized", Order = 0 };
+
+            await _repository.SaveSnippetAsync(snippet);
+            Snippet loaded = Assert.Single(await _repository.LoadSnippetsAsync());
+
+            Assert.Null(loaded.CategoryId);
+        }
+
+        [Fact]
         public async Task Locked_PersistsAsTrueAndCannotBeReloadedAsFalse()
         {
             Snippet snippet = new() { Content = "protected", Order = 0, Locked = true };

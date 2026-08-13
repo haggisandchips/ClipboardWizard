@@ -1,4 +1,5 @@
 using ClipboardWizard.Model;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace ClipboardWizard.ViewModel
@@ -12,6 +13,9 @@ namespace ClipboardWizard.ViewModel
     public interface ISnippetHost
     {
         string ClipboardText { get; }
+
+        /// <summary>Available categories, for the edit dialog's assignment dropdown.</summary>
+        IReadOnlyList<Category> Categories { get; }
 
         Task UpdateSnippetAsync(Snippet snippet);
 

@@ -38,6 +38,23 @@ namespace ClipboardWizard.Tests.Service
             Assert.Null(loaded.ImageData);
         }
 
+        [Fact]
+        public async Task OpeningAPreCategorySchemaDatabase_DefaultsExistingRowsToUncategorized()
+        {
+            using (SQLiteConnection legacyConnection = new(_databasePath))
+            {
+                legacyConnection.Execute(
+                    "CREATE TABLE Snippet (Id INTEGER PRIMARY KEY AUTOINCREMENT, \"Order\" INTEGER, Description TEXT, Content TEXT, Locked INTEGER)");
+                legacyConnection.Execute(
+                    "INSERT INTO Snippet (\"Order\", Description, Content, Locked) VALUES (0, NULL, 'legacy content', 0)");
+            }
+
+            SnippetRepository repository = new(_databasePath);
+            Snippet loaded = Assert.Single(await repository.LoadSnippetsAsync());
+
+            Assert.Null(loaded.CategoryId);
+        }
+
         public void Dispose()
         {
             try

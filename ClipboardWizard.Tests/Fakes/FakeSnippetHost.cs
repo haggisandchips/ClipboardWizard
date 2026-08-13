@@ -7,6 +7,8 @@ namespace ClipboardWizard.Tests.Fakes
     {
         public string ClipboardText { get; set; } = string.Empty;
 
+        public IReadOnlyList<Category> Categories { get; set; } = new List<Category>();
+
         public List<Snippet> UpdatedSnippets { get; } = new();
 
         public List<SnippetViewModel> RemovedSnippets { get; } = new();

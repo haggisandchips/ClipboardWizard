@@ -124,9 +124,3 @@ unhandled exception in async void would otherwise crash the app silently.
   default for pre-existing rows (int/bool default to `0`/`false`, which
   isn't always the right value).
 
-## Planned work
-
-Not yet implemented — see [SPEC.md](SPEC.md#planned) before making
-structural decisions that would make it harder to add later:
-
-- Organizing snippets into categories

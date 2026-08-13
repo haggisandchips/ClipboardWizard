@@ -48,11 +48,12 @@ namespace ClipboardWizard
                 string databasePath = Path.Combine(localAppPath, "Snippets.db");
 
                 ISnippetRepository repository = new SnippetRepository(databasePath);
+                ICategoryRepository categoryRepository = new CategoryRepository(databasePath);
                 IClipboardMonitor clipboardMonitor = new SharpClipboardMonitor(new SharpClipboard());
                 IWindowSettingsService windowSettingsService = new WindowSettingsService(
                     Path.Combine(localAppPath, "WindowSettings.json"));
 
-                WizardViewModel viewModel = new(repository, clipboardMonitor);
+                WizardViewModel viewModel = new(repository, categoryRepository, clipboardMonitor);
                 await viewModel.LoadAsync();
 
                 WizardView wizardView = new(viewModel, windowSettingsService);

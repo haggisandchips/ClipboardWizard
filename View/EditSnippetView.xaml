@@ -24,9 +24,16 @@
             <Label Content="Description" />
             <TextBox x:Name="DescriptionTextBox" Text="{Binding Description, Mode=TwoWay}" TabIndex="1" />
         </StackPanel>
+        <StackPanel DockPanel.Dock="Top" Margin="0 0 0 10">
+            <Label Content="Category" />
+            <ComboBox ItemsSource="{Binding Categories}"
+                      SelectedItem="{Binding SelectedCategory, Mode=TwoWay}"
+                      DisplayMemberPath="Name"
+                      TabIndex="2" />
+        </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="{Binding ActionButtonText}" IsEnabled="{Binding IsValid}" Click="Update_Click" Margin="5" TabIndex="3" IsDefault="True" />
-            <Button Content="Cancel" Click="Cancel_Click" Margin="5" TabIndex="4" IsCancel="True" />
+            <Button Content="{Binding ActionButtonText}" IsEnabled="{Binding IsValid}" Click="Update_Click" Margin="5" TabIndex="4" IsDefault="True" />
+            <Button Content="Cancel" Click="Cancel_Click" Margin="5" TabIndex="5" IsCancel="True" />
         </StackPanel>
         <DockPanel>
             <Label DockPanel.Dock="Top" Content="Content" />
@@ -36,7 +43,7 @@
                          AcceptsReturn="True"
                          AcceptsTab="True"
                          ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                         ScrollViewer.VerticalScrollBarVisibility="Auto" TabIndex="2">
+                         ScrollViewer.VerticalScrollBarVisibility="Auto" TabIndex="3">
                     <TextBox.Style>
                         <Style TargetType="TextBox">
                             <Style.Triggers>

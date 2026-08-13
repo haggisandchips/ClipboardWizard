@@ -1,0 +1,92 @@
+<UserControl x:Class="ClipboardWizard.View.Control.CategorySectionControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:fa5="http://schemas.fontawesome.com/icons/"
+             xmlns:uc="clr-namespace:ClipboardWizard.View.Control"
+             mc:Ignorable="d"
+             d:DesignWidth="600" d:DesignHeight="120">
+
+    <!-- Header is a drag SOURCE (category reorder) and click target (expand/collapse) only -
+         WizardView owns all drop handling and the shared drop-position indicators, for the
+         same reason SnippetControl does: a boundary between two rows/tiles is one shared
+         insertion point, not something each control should track separately. -->
+    <!-- Margin sits on this always-rendered outer wrapper, not on the collapsible body below -
+         so the gap around a header (where the drag-reorder indicator bar needs room to sit
+         visibly between two sections) is identical whether this section, or its neighbour, is
+         expanded or collapsed. -->
+    <StackPanel Margin="0 8 0 8">
+        <!-- Click-vs-drag is decided entirely by the Preview handlers below (down/move/up),
+             rather than splitting it between them and a child Button's own click machinery -
+             letting a Button also race for mouse capture here made expand/collapse
+             unreliable, since DragDrop.DoDragDrop could steal capture the Button's own click
+             was relying on even for a stationary press. Only the Delete button stays a real
+             Button, and is explicitly excluded from the toggle in Header_PreviewMouseLeftButtonUp. -->
+        <Border x:Name="HeaderBorder"
+                MinHeight="44"
+                Background="#FFE3E3E3"
+                BorderBrush="#66666666"
+                BorderThickness="1"
+                CornerRadius="3"
+                PreviewMouseLeftButtonDown="Header_PreviewMouseLeftButtonDown"
+                PreviewMouseMove="Header_PreviewMouseMove"
+                PreviewMouseLeftButtonUp="Header_PreviewMouseLeftButtonUp">
+            <DockPanel>
+                <Button x:Name="DeleteButton" DockPanel.Dock="Right" Command="{Binding Delete}" Background="Transparent" BorderThickness="0" Padding="6" Focusable="False">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <fa5:FontAwesome Icon="Solid_Trash" FontSize="12" />
+                </Button>
+                <DockPanel Margin="8 6">
+                    <!-- fa5:FontAwesome derives from TextBlock, so it doesn't center itself
+                         within extra vertical space the way most controls do - see the same
+                         note on WizardView's window icon. -->
+                    <fa5:FontAwesome DockPanel.Dock="Left" Margin="0 0 8 0" FontSize="12" VerticalAlignment="Center">
+                        <fa5:FontAwesome.Style>
+                            <Style TargetType="fa5:FontAwesome">
+                                <Setter Property="Icon" Value="Solid_ChevronDown" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                                        <Setter Property="Icon" Value="Solid_ChevronRight" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </fa5:FontAwesome.Style>
+                    </fa5:FontAwesome>
+                    <TextBlock Text="{Binding Name}" FontWeight="Bold" VerticalAlignment="Center" />
+                </DockPanel>
+            </DockPanel>
+        </Border>
+        <ItemsControl ItemsSource="{Binding Snippets}" Margin="0 5 0 0">
+            <ItemsControl.Style>
+                <Style TargetType="ItemsControl">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsExpanded}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </ItemsControl.Style>
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid x:Name="SnippetsUniformGrid"
+                                 VerticalAlignment="Top"
+                                 Loaded="SnippetsUniformGrid_Loaded" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <uc:SnippetControl />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </StackPanel>
+</UserControl>

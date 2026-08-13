@@ -4,11 +4,10 @@ using ClipboardWizard.View.Control;
 using ClipboardWizard.ViewModel;
 using ClipboardWizard.ViewModel.Command;
 using System;
-using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 
 namespace ClipboardWizard.View
@@ -21,7 +20,8 @@ namespace ClipboardWizard.View
         private readonly WizardViewModel _viewModel;
         private readonly IWindowSettingsService _windowSettingsService;
 
-        public UniformGrid SnippetsUniformGrid { get; private set; }
+        /// <summary>The section currently highlighted as a general (not tile-precise) snippet drop target, if any.</summary>
+        private CategorySectionControl _highlightedSection;
 
         public WizardView(WizardViewModel viewModel, IWindowSettingsService windowSettingsService)
         {
@@ -33,9 +33,10 @@ namespace ClipboardWizard.View
             DataContext = _viewModel;
             RightWindowCommandsHost.DataContext = _viewModel;
 
-            _viewModel.SnippetViewModels.CollectionChanged += Snippets_CollectionChanged;
+            WindowSettings settings = _windowSettingsService.Load();
+            ApplyWindowSettings(settings);
+            _viewModel.UncategorizedSection.IsExpanded = settings?.UncategorizedExpanded ?? true;
 
-            ApplyWindowSettings(_windowSettingsService.Load());
             Closing += WizardView_Closing;
         }
 
@@ -85,81 +86,125 @@ namespace ClipboardWizard.View
                 Top = bounds.Top,
                 Width = bounds.Width,
                 Height = bounds.Height,
-                IsMaximized = WindowState == WindowState.Maximized
+                IsMaximized = WindowState == WindowState.Maximized,
+                UncategorizedExpanded = _viewModel.UncategorizedSection.IsExpanded
             });
         }
 
-        private void Snippets_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private void AccordionHost_DragOver(object sender, DragEventArgs e)
         {
-            RecalculateColumns();
-        }
-
-        private void SnippetsUniformGrid_Loaded(object sender, RoutedEventArgs e)
-        {
-            SnippetsUniformGrid = sender as UniformGrid;
-            SizeChanged += Window_SizedChangedEvent;
-
-            RecalculateColumns();
-        }
-
-        private void Window_SizedChangedEvent(object sender, SizeChangedEventArgs e)
-        {
-            RecalculateColumns();
-        }
-
-        private void RecalculateColumns()
-        {
-            if (SnippetsUniformGrid == null)
+            if (e.Data.GetData(DragDropFormats.Category) is CategoryViewModel categorySource)
             {
+                CategoryDragOver((UIElement)sender, e, categorySource);
                 return;
             }
 
-            int columns = Math.Min((int)(SnippetsUniformGrid.ActualWidth / 200), _viewModel.SnippetViewModels.Count);
-
-            SnippetsUniformGrid.Columns = columns > 0 ? columns : 1;
-        }
-
-        private void SnippetsHost_DragOver(object sender, DragEventArgs e)
-        {
-            SnippetControl target = FindTileUnderCursor((UIElement)sender, e);
-
-            if (target?.DataContext is SnippetViewModel targetViewModel
-                && e.Data.GetData(DragDropFormats.Snippet) is SnippetViewModel source)
+            if (e.Data.GetData(DragDropFormats.Snippet) is SnippetViewModel snippetSource)
             {
-                bool insertBefore = IsOverLeftHalf(target, e);
-
-                if (_viewModel.WouldReorder(source, targetViewModel, insertBefore))
-                {
-                    e.Effects = DragDropEffects.Move;
-                    PositionIndicator(target, insertBefore);
-                    return;
-                }
+                SnippetDragOver((UIElement)sender, e, snippetSource);
+                return;
             }
 
             e.Effects = DragDropEffects.None;
-            DropIndicator.Visibility = Visibility.Collapsed;
+            SnippetDropIndicator.Visibility = Visibility.Collapsed;
+            CategoryDropIndicator.Visibility = Visibility.Collapsed;
+            SetHighlightedSection(null);
         }
 
-        private void SnippetsHost_DragLeave(object sender, DragEventArgs e)
+        private void CategoryDragOver(UIElement relativeTo, DragEventArgs e, CategoryViewModel source)
         {
-            DropIndicator.Visibility = Visibility.Collapsed;
+            SnippetDropIndicator.Visibility = Visibility.Collapsed;
+            SetHighlightedSection(null);
+
+            CategorySectionControl target = FindUnderCursor<CategorySectionControl>(relativeTo, e);
+            bool insertBefore = target != null && IsOverTopHalf(target, e);
+
+            if (target?.DataContext is CategoryViewModel targetCategory
+                && _viewModel.WouldReorderCategory(source, targetCategory, insertBefore))
+            {
+                e.Effects = DragDropEffects.Move;
+                PositionCategoryIndicator(target, insertBefore);
+                return;
+            }
+
+            e.Effects = DragDropEffects.None;
+            CategoryDropIndicator.Visibility = Visibility.Collapsed;
         }
 
-        private async void SnippetsHost_Drop(object sender, DragEventArgs e)
+        private void SnippetDragOver(UIElement relativeTo, DragEventArgs e, SnippetViewModel source)
         {
-            SnippetControl targetControl = FindTileUnderCursor((UIElement)sender, e);
-            DropIndicator.Visibility = Visibility.Collapsed;
+            CategoryDropIndicator.Visibility = Visibility.Collapsed;
 
-            if (targetControl?.DataContext is not SnippetViewModel target
-                || e.Data.GetData(DragDropFormats.Snippet) is not SnippetViewModel source
-                || ReferenceEquals(source, target))
+            SnippetControl targetTile = FindUnderCursor<SnippetControl>(relativeTo, e);
+            if (targetTile?.DataContext is SnippetViewModel targetSnippet)
+            {
+                SetHighlightedSection(null);
+                bool insertBefore = IsOverLeftHalf(targetTile, e);
+
+                if (_viewModel.WouldMoveSnippet(source, targetSnippet, insertBefore))
+                {
+                    e.Effects = DragDropEffects.Move;
+                    PositionSnippetIndicator(targetTile, insertBefore);
+                    return;
+                }
+
+                e.Effects = DragDropEffects.None;
+                SnippetDropIndicator.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            // Not over a specific tile - allow a general drop anywhere in a section (header or
+            // empty body) to assign/append the snippet there. No line to indicate a position,
+            // so the section itself is highlighted instead, the same blue as the indicators.
+            CategorySectionControl targetSection = FindUnderCursor<CategorySectionControl>(relativeTo, e);
+            SetHighlightedSection(targetSection);
+            e.Effects = targetSection != null ? DragDropEffects.Move : DragDropEffects.None;
+            SnippetDropIndicator.Visibility = Visibility.Collapsed;
+        }
+
+        private void SetHighlightedSection(CategorySectionControl section)
+        {
+            if (ReferenceEquals(_highlightedSection, section))
             {
                 return;
             }
 
+            if (_highlightedSection != null)
+            {
+                _highlightedSection.IsSnippetDropTarget = false;
+            }
+
+            _highlightedSection = section;
+
+            if (_highlightedSection != null)
+            {
+                _highlightedSection.IsSnippetDropTarget = true;
+            }
+        }
+
+        private void AccordionHost_DragLeave(object sender, DragEventArgs e)
+        {
+            SnippetDropIndicator.Visibility = Visibility.Collapsed;
+            CategoryDropIndicator.Visibility = Visibility.Collapsed;
+            SetHighlightedSection(null);
+        }
+
+        private async void AccordionHost_Drop(object sender, DragEventArgs e)
+        {
+            SnippetDropIndicator.Visibility = Visibility.Collapsed;
+            CategoryDropIndicator.Visibility = Visibility.Collapsed;
+            SetHighlightedSection(null);
+
             try
             {
-                await source.MoveToAsync(target, IsOverLeftHalf(targetControl, e));
+                if (e.Data.GetData(DragDropFormats.Category) is CategoryViewModel categorySource)
+                {
+                    await DropCategoryAsync((UIElement)sender, e, categorySource);
+                }
+                else if (e.Data.GetData(DragDropFormats.Snippet) is SnippetViewModel snippetSource)
+                {
+                    await DropSnippetAsync((UIElement)sender, e, snippetSource);
+                }
             }
             catch (Exception ex)
             {
@@ -167,15 +212,52 @@ namespace ClipboardWizard.View
             }
         }
 
-        private void PositionIndicator(SnippetControl target, bool insertBefore)
+        private Task DropCategoryAsync(UIElement relativeTo, DragEventArgs e, CategoryViewModel source)
         {
-            Point targetTopLeft = target.TranslatePoint(new Point(0, 0), IndicatorCanvas);
+            CategorySectionControl targetControl = FindUnderCursor<CategorySectionControl>(relativeTo, e);
+
+            if (targetControl?.DataContext is not CategoryViewModel target || ReferenceEquals(source, target))
+            {
+                return Task.CompletedTask;
+            }
+
+            return source.MoveToAsync(target, IsOverTopHalf(targetControl, e));
+        }
+
+        private Task DropSnippetAsync(UIElement relativeTo, DragEventArgs e, SnippetViewModel source)
+        {
+            SnippetControl targetTile = FindUnderCursor<SnippetControl>(relativeTo, e);
+            if (targetTile?.DataContext is SnippetViewModel target)
+            {
+                return ReferenceEquals(source, target) ? Task.CompletedTask : source.MoveToAsync(target, IsOverLeftHalf(targetTile, e));
+            }
+
+            CategorySectionControl targetSection = FindUnderCursor<CategorySectionControl>(relativeTo, e);
+            return targetSection?.DataContext is ICategorySection section
+                ? _viewModel.AssignCategoryAsync(source, section)
+                : Task.CompletedTask;
+        }
+
+        private void PositionSnippetIndicator(SnippetControl target, bool insertBefore)
+        {
+            Point targetTopLeft = target.TranslatePoint(new Point(0, 0), SnippetIndicatorCanvas);
             double centerX = targetTopLeft.X + (insertBefore ? 0 : target.ActualWidth);
 
-            Canvas.SetLeft(DropIndicator, centerX - DropIndicator.Width / 2);
-            Canvas.SetTop(DropIndicator, targetTopLeft.Y);
-            DropIndicator.Height = target.ActualHeight;
-            DropIndicator.Visibility = Visibility.Visible;
+            Canvas.SetLeft(SnippetDropIndicator, centerX - SnippetDropIndicator.Width / 2);
+            Canvas.SetTop(SnippetDropIndicator, targetTopLeft.Y);
+            SnippetDropIndicator.Height = target.ActualHeight;
+            SnippetDropIndicator.Visibility = Visibility.Visible;
+        }
+
+        private void PositionCategoryIndicator(CategorySectionControl target, bool insertBefore)
+        {
+            Point targetTopLeft = target.TranslatePoint(new Point(0, 0), CategoryIndicatorCanvas);
+            double centerY = targetTopLeft.Y + (insertBefore ? 0 : target.ActualHeight);
+
+            Canvas.SetTop(CategoryDropIndicator, centerY - CategoryDropIndicator.Height / 2);
+            Canvas.SetLeft(CategoryDropIndicator, targetTopLeft.X);
+            CategoryDropIndicator.Width = target.ActualWidth;
+            CategoryDropIndicator.Visibility = Visibility.Visible;
         }
 
         private static bool IsOverLeftHalf(SnippetControl tile, DragEventArgs e)
@@ -183,17 +265,22 @@ namespace ClipboardWizard.View
             return e.GetPosition(tile).X < tile.ActualWidth / 2;
         }
 
-        private static SnippetControl FindTileUnderCursor(UIElement relativeTo, DragEventArgs e)
+        private static bool IsOverTopHalf(CategorySectionControl section, DragEventArgs e)
+        {
+            return e.GetPosition(section).Y < section.ActualHeight / 2;
+        }
+
+        private static T FindUnderCursor<T>(UIElement relativeTo, DragEventArgs e) where T : DependencyObject
         {
             HitTestResult hit = VisualTreeHelper.HitTest(relativeTo, e.GetPosition(relativeTo));
             DependencyObject current = hit?.VisualHit;
 
-            while (current != null && current is not SnippetControl)
+            while (current != null && current is not T)
             {
                 current = VisualTreeHelper.GetParent(current);
             }
 
-            return current as SnippetControl;
+            return current as T;
         }
     }
 }

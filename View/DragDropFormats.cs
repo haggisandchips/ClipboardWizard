@@ -4,5 +4,7 @@ namespace ClipboardWizard.View
     internal static class DragDropFormats
     {
         public const string Snippet = "ClipboardWizard.SnippetViewModel";
+
+        public const string Category = "ClipboardWizard.CategoryViewModel";
     }
 }

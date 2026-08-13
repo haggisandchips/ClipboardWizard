@@ -86,7 +86,7 @@ namespace ClipboardWizard.ViewModel
             // stays modal to the correct window.
             Window owner = Application.Current.MainWindow;
 
-            EditSnippetViewModel editSnippetViewModel = new(Snippet);
+            EditSnippetViewModel editSnippetViewModel = new(Snippet, _host.Categories);
             EditSnippetView editSnippetView = new()
             {
                 DataContext = editSnippetViewModel,
@@ -103,6 +103,7 @@ namespace ClipboardWizard.ViewModel
             }
 
             Snippet.Description = editSnippetViewModel.Description;
+            Snippet.CategoryId = editSnippetViewModel.SelectedCategoryId;
 
             // Only Text snippets have editable content; an Image snippet's picture never
             // changes here, so its match-against-clipboard State can't have changed either.

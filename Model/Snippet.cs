@@ -72,6 +72,19 @@ namespace ClipboardWizard.Model
             }
         }
 
+        private int? _categoryId;
+
+        /// <summary>The Category this snippet belongs to, or null if uncategorized.</summary>
+        public int? CategoryId
+        {
+            get => _categoryId;
+            set
+            {
+                _categoryId = value;
+                OnPropertyChanged(nameof(CategoryId));
+            }
+        }
+
         private bool _locked;
 
         /// <summary>
