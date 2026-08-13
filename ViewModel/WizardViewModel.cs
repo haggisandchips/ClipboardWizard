@@ -153,6 +153,12 @@ namespace ClipboardWizard.ViewModel
             Categories.Remove(categoryViewModel);
         }
 
+        /// <summary>Assigns snippetViewModel to the category with this id (or Uncategorized if null) - see ISnippetHost.</summary>
+        public Task AssignCategoryAsync(SnippetViewModel snippetViewModel, int? categoryId)
+        {
+            return AssignCategoryAsync(snippetViewModel, GetSection(categoryId));
+        }
+
         /// <summary>Assigns snippetViewModel to targetSection (drag onto a header, or the general body of a section).</summary>
         public Task AssignCategoryAsync(SnippetViewModel snippetViewModel, ICategorySection targetSection)
         {

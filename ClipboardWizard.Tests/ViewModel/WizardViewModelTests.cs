@@ -492,6 +492,45 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task AssignCategoryAsync_ByCategoryId_MovesSnippetIntoThatCategorysBucket()
+        {
+            // Regression test: this is the overload the edit dialog goes through
+            // (SnippetViewModel.EditSnippetAsync) - it must move the snippet between
+            // ICategorySection.Snippets collections, not just flip Snippet.CategoryId, or the
+            // accordion still shows it under its old section and a subsequent drag into the
+            // new category is treated as a no-op (CategoryId already matches).
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = null });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            SnippetViewModel snippet = Assert.Single(viewModel.UncategorizedSection.Snippets);
+
+            await viewModel.AssignCategoryAsync(snippet, category.Category.Id);
+
+            Assert.Equal(1, snippet.Snippet.CategoryId);
+            Assert.Contains(snippet, category.Snippets);
+            Assert.DoesNotContain(snippet, viewModel.UncategorizedSection.Snippets);
+        }
+
+        [Fact]
+        public async Task AssignCategoryAsync_ByCategoryId_Null_MovesSnippetToUncategorizedBucket()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            SnippetViewModel snippet = Assert.Single(category.Snippets);
+
+            await viewModel.AssignCategoryAsync(snippet, (int?)null);
+
+            Assert.Null(snippet.Snippet.CategoryId);
+            Assert.Contains(snippet, viewModel.UncategorizedSection.Snippets);
+            Assert.DoesNotContain(snippet, category.Snippets);
+        }
+
+        [Fact]
         public async Task AssignCategoryAsync_ToUncategorizedSection_ClearsCategoryId()
         {
             var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();

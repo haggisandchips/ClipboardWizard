@@ -15,6 +15,8 @@ namespace ClipboardWizard.Tests.Fakes
 
         public List<(SnippetViewModel Snippet, SnippetViewModel Target, bool InsertBefore)> MovedTo { get; } = new();
 
+        public List<(SnippetViewModel Snippet, int? CategoryId)> AssignedCategories { get; } = new();
+
         public Task UpdateSnippetAsync(Snippet snippet)
         {
             UpdatedSnippets.Add(snippet);
@@ -24,6 +26,12 @@ namespace ClipboardWizard.Tests.Fakes
         public Task RemoveSnippetAsync(SnippetViewModel snippetViewModel)
         {
             RemovedSnippets.Add(snippetViewModel);
+            return Task.CompletedTask;
+        }
+
+        public Task AssignCategoryAsync(SnippetViewModel snippetViewModel, int? categoryId)
+        {
+            AssignedCategories.Add((snippetViewModel, categoryId));
             return Task.CompletedTask;
         }
 

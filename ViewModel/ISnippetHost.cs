@@ -22,6 +22,14 @@ namespace ClipboardWizard.ViewModel
         Task RemoveSnippetAsync(SnippetViewModel snippetViewModel);
 
         /// <summary>
+        /// Assigns snippetViewModel to the category with this id (or Uncategorized if null),
+        /// moving it into that section's on-screen collection as well as persisting the change -
+        /// the edit dialog's category picker works in ids, unlike the ICategorySection instances
+        /// drag-and-drop already has in hand.
+        /// </summary>
+        Task AssignCategoryAsync(SnippetViewModel snippetViewModel, int? categoryId);
+
+        /// <summary>
         /// Drag-and-drop reordering: moves snippetViewModel to sit immediately before or after
         /// targetSnippetViewModel, regardless of which direction it was dragged from.
         /// </summary>

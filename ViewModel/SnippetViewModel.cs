@@ -103,7 +103,6 @@ namespace ClipboardWizard.ViewModel
             }
 
             Snippet.Description = editSnippetViewModel.Description;
-            Snippet.CategoryId = editSnippetViewModel.SelectedCategoryId;
 
             // Only Text snippets have editable content; an Image snippet's picture never
             // changes here, so its match-against-clipboard State can't have changed either.
@@ -114,6 +113,11 @@ namespace ClipboardWizard.ViewModel
             }
 
             await _host.UpdateSnippetAsync(Snippet);
+
+            // Goes through the host rather than setting Snippet.CategoryId directly, since a
+            // category change also has to move this snippet between ICategorySection.Snippets
+            // collections (what the accordion actually displays) - not just update the id.
+            await _host.AssignCategoryAsync(this, editSnippetViewModel.SelectedCategoryId);
 
             OnPropertyChanged(nameof(Snippet));
         }
