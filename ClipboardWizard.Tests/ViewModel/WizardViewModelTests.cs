@@ -562,6 +562,43 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task WouldAssignCategory_ToItsCurrentCategory_IsFalse()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            SnippetViewModel snippet = Assert.Single(viewModel.SnippetViewModels);
+
+            Assert.False(viewModel.WouldAssignCategory(snippet, category));
+        }
+
+        [Fact]
+        public async Task WouldAssignCategory_ToUncategorizedWhenAlreadyUncategorized_IsFalse()
+        {
+            var (viewModel, repository, _, _) = CreateSutWithCategories();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = null });
+            await viewModel.LoadAsync();
+            SnippetViewModel snippet = Assert.Single(viewModel.SnippetViewModels);
+
+            Assert.False(viewModel.WouldAssignCategory(snippet, viewModel.UncategorizedSection));
+        }
+
+        [Fact]
+        public async Task WouldAssignCategory_ToADifferentCategory_IsTrue()
+        {
+            var (viewModel, repository, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = null });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            SnippetViewModel snippet = Assert.Single(viewModel.SnippetViewModels);
+
+            Assert.True(viewModel.WouldAssignCategory(snippet, category));
+        }
+
+        [Fact]
         public async Task MoveCategoryToAsync_ReordersAndRenumbersOrderToMatchNewPositions()
         {
             var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();

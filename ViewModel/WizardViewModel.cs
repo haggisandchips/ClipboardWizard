@@ -159,15 +159,21 @@ namespace ClipboardWizard.ViewModel
             return AssignCategoryAsync(snippetViewModel, GetSection(categoryId));
         }
 
+        /// <summary>Whether assigning snippetViewModel to targetSection would actually change its category - false if it's already there. Used to suppress the drop highlight, as well as by AssignCategoryAsync itself to skip the no-op case.</summary>
+        public bool WouldAssignCategory(SnippetViewModel snippetViewModel, ICategorySection targetSection)
+        {
+            return !ReferenceEquals(GetSection(snippetViewModel.Snippet.CategoryId), targetSection);
+        }
+
         /// <summary>Assigns snippetViewModel to targetSection (drag onto a header, or the general body of a section).</summary>
         public Task AssignCategoryAsync(SnippetViewModel snippetViewModel, ICategorySection targetSection)
         {
-            ICategorySection sourceSection = GetSection(snippetViewModel.Snippet.CategoryId);
-            if (ReferenceEquals(sourceSection, targetSection))
+            if (!WouldAssignCategory(snippetViewModel, targetSection))
             {
                 return Task.CompletedTask;
             }
 
+            ICategorySection sourceSection = GetSection(snippetViewModel.Snippet.CategoryId);
             sourceSection.Snippets.Remove(snippetViewModel);
             snippetViewModel.Snippet.CategoryId = CategoryIdOf(targetSection);
             targetSection.Snippets.Add(snippetViewModel);
