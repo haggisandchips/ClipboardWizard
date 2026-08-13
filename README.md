@@ -13,10 +13,15 @@ separate from (and outliving) the OS's own volatile clipboard history.
   they match what's currently on the clipboard.
 - Optional recording mode to automatically capture new clipboard content
   as snippets, or add them manually.
-- Edit a snippet's description (and, for text, its content), reorder the
-  list, and copy any snippet back to the clipboard with a click.
+- Organize snippets into user-defined categories, shown as an
+  expandable/collapsible accordion, with drag-and-drop to assign,
+  recategorize, and reorder.
+- Edit a snippet's description (and, for text, its content), drag-and-drop
+  to reorder within a category, and copy any snippet back to the clipboard
+  with a click.
 - Permanent locking to protect a snippet from accidental deletion, with a
   brief unlock window for when it genuinely needs to go.
+- Remembers window position, size, and maximized state across restarts.
 - Self-updating: checks this repo's GitHub Releases on startup and offers
   to apply new versions.
 
