@@ -5,6 +5,22 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-08-13
+
+### Fixed
+
+- Dragging a snippet toward an empty or collapsed category could land it in
+  the wrong (neighbouring) category instead, since the thin/empty target
+  had no tiles of its own to hit-test against. Category sections now
+  correctly claim their own header, gap, and tile area as a drop target
+  ahead of any neighbour's.
+- The drop highlight and target no longer appear when hovering a snippet
+  over the category it's already in.
+- The expand/collapse chevron no longer shifts the category name next to
+  it when toggled (the two chevron glyphs weren't the same width).
+- Toggling an empty category no longer nudges the categories below it,
+  since its (empty) snippet grid no longer reserves space it doesn't need.
+
 ## [1.2.1] - 2026-08-13
 
 ### Fixed
