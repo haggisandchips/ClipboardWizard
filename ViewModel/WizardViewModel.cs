@@ -185,31 +185,45 @@ namespace ClipboardWizard.ViewModel
             SnippetViewModels.Remove(snippetViewModel);
         }
 
-        public async Task MoveSnippetToAsync(SnippetViewModel snippetViewModel, SnippetViewModel targetSnippetViewModel, bool insertBefore)
+        /// <summary>
+        /// Whether dropping snippetViewModel on targetSnippetViewModel (per MoveSnippetToAsync's
+        /// insertBefore semantics) would actually change its position - false either side of the
+        /// dragged tile itself, since inserting immediately before/after where it already sits is
+        /// a no-op. Used to suppress the drop indicator for positions that wouldn't reorder
+        /// anything, as well as by MoveSnippetToAsync itself to skip the no-op case.
+        /// </summary>
+        public bool WouldReorder(SnippetViewModel snippetViewModel, SnippetViewModel targetSnippetViewModel, bool insertBefore)
         {
             int currentIndex = SnippetViewModels.IndexOf(snippetViewModel);
             int targetIndex = SnippetViewModels.IndexOf(targetSnippetViewModel);
 
             if (currentIndex < 0 || targetIndex < 0 || currentIndex == targetIndex)
             {
-                return;
+                return false;
             }
 
-            // ObservableCollection.Move(old, new) removes at `old` first, which shifts
-            // everything after it left by one - so the same `new` index lands *before* the
-            // target when moving backward but *after* it when moving forward, unless
-            // corrected for here. insertBefore must mean the same thing regardless of which
-            // direction the item is dragged from.
+            return GetDesiredIndex(currentIndex, targetIndex, insertBefore) != currentIndex;
+        }
+
+        // ObservableCollection.Move(old, new) removes at `old` first, which shifts everything
+        // after it left by one - so the same `new` index lands *before* the target when moving
+        // backward but *after* it when moving forward, unless corrected for here. insertBefore
+        // must mean the same thing regardless of which direction the item is dragged from.
+        private static int GetDesiredIndex(int currentIndex, int targetIndex, bool insertBefore)
+        {
             int desiredIndex = insertBefore ? targetIndex : targetIndex + 1;
-            if (currentIndex < desiredIndex)
-            {
-                desiredIndex--;
-            }
+            return currentIndex < desiredIndex ? desiredIndex - 1 : desiredIndex;
+        }
 
-            if (desiredIndex == currentIndex)
+        public async Task MoveSnippetToAsync(SnippetViewModel snippetViewModel, SnippetViewModel targetSnippetViewModel, bool insertBefore)
+        {
+            if (!WouldReorder(snippetViewModel, targetSnippetViewModel, insertBefore))
             {
                 return;
             }
+
+            int currentIndex = SnippetViewModels.IndexOf(snippetViewModel);
+            int desiredIndex = GetDesiredIndex(currentIndex, SnippetViewModels.IndexOf(targetSnippetViewModel), insertBefore);
 
             SnippetViewModels.Move(currentIndex, desiredIndex);
 

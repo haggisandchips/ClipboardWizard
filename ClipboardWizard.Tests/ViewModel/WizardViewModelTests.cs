@@ -223,6 +223,47 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task WouldReorder_OnItself_IsFalse()
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            await viewModel.LoadAsync();
+            SnippetViewModel snippet = viewModel.SnippetViewModels[0];
+
+            Assert.False(viewModel.WouldReorder(snippet, snippet, insertBefore: true));
+        }
+
+        [Theory]
+        [InlineData(true)] // dropping on the left half of your own immediate successor...
+        [InlineData(false)] // ...or the right half of your own immediate predecessor
+        public async Task WouldReorder_ForItsOwnCurrentPosition_IsFalse(bool insertBefore)
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            await viewModel.LoadAsync();
+            SnippetViewModel middle = viewModel.SnippetViewModels[1]; // "b"
+            SnippetViewModel target = insertBefore ? viewModel.SnippetViewModels[2] : viewModel.SnippetViewModels[0];
+
+            Assert.False(viewModel.WouldReorder(middle, target, insertBefore));
+        }
+
+        [Fact]
+        public async Task WouldReorder_ForADifferentPosition_IsTrue()
+        {
+            var (viewModel, repository, _) = CreateSut();
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1 });
+            repository.Snippets.Add(new Snippet { Id = 3, Content = "c", Order = 2 });
+            await viewModel.LoadAsync();
+            SnippetViewModel dragged = viewModel.SnippetViewModels[2]; // "c"
+            SnippetViewModel target = viewModel.SnippetViewModels[0]; // "a"
+
+            Assert.True(viewModel.WouldReorder(dragged, target, insertBefore: true));
+        }
+
+        [Fact]
         public async Task MoveSnippetToAsync_InsertAfter()
         {
             var (viewModel, repository, _) = CreateSut();

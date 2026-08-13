@@ -123,14 +123,21 @@ namespace ClipboardWizard.View
         {
             SnippetControl target = FindTileUnderCursor((UIElement)sender, e);
 
-            if (target == null || !e.Data.GetDataPresent(DragDropFormats.Snippet))
+            if (target?.DataContext is SnippetViewModel targetViewModel
+                && e.Data.GetData(DragDropFormats.Snippet) is SnippetViewModel source)
             {
-                DropIndicator.Visibility = Visibility.Collapsed;
-                return;
+                bool insertBefore = IsOverLeftHalf(target, e);
+
+                if (_viewModel.WouldReorder(source, targetViewModel, insertBefore))
+                {
+                    e.Effects = DragDropEffects.Move;
+                    PositionIndicator(target, insertBefore);
+                    return;
+                }
             }
 
-            e.Effects = DragDropEffects.Move;
-            PositionIndicator(target, IsOverLeftHalf(target, e));
+            e.Effects = DragDropEffects.None;
+            DropIndicator.Visibility = Visibility.Collapsed;
         }
 
         private void SnippetsHost_DragLeave(object sender, DragEventArgs e)
