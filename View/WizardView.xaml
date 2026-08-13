@@ -51,7 +51,8 @@
                 <Button Command="{Binding AddSnippet}" Focusable="False" Content="New"></Button>
             </StackPanel>
         </DockPanel>
-        <Grid AllowDrop="True"
+        <Grid Margin="5"
+              AllowDrop="True"
               DragOver="SnippetsHost_DragOver"
               DragLeave="SnippetsHost_DragLeave"
               Drop="SnippetsHost_Drop">
