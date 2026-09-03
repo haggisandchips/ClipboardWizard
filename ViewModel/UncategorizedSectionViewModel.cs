@@ -35,6 +35,10 @@ namespace ClipboardWizard.ViewModel
 
         public ICommand Delete => null;
 
+        public ICommand AddSnippet => null;
+
+        public ICommand SaveClipboardContents => null;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged(string propertyName)

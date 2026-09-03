@@ -18,5 +18,14 @@ namespace ClipboardWizard.ViewModel
         /// targetCategoryViewModel, regardless of which direction it was dragged from.
         /// </summary>
         Task MoveCategoryToAsync(CategoryViewModel categoryViewModel, CategoryViewModel targetCategoryViewModel, bool insertBefore);
+
+        /// <summary>Whether the current clipboard contents could be saved as a snippet - backs the per-category quick-add button's enabled state.</summary>
+        bool HasSaveableClipboardContent { get; }
+
+        /// <summary>Opens the new-snippet dialog with categoryViewModel pre-selected - the per-category "New Snippet" button.</summary>
+        Task AddSnippetAsync(CategoryViewModel categoryViewModel);
+
+        /// <summary>Saves the current clipboard contents straight into categoryViewModel - the per-category "Add" button.</summary>
+        Task SaveClipboardSnippetAsync(CategoryViewModel categoryViewModel);
     }
 }

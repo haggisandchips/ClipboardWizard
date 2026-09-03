@@ -119,10 +119,10 @@ namespace ClipboardWizard.View.Control
 
             if (wasDragging
                 || DataContext is not ICategorySection section
-                || (e.OriginalSource is DependencyObject source && IsDescendantOf(source, DeleteButton)))
+                || (e.OriginalSource is DependencyObject source && IsOnAnyOf(source, DeleteButton, SaveClipboardContentsButton, AddSnippetButton)))
             {
-                // A drag already happened, or this press/release was on the Delete button -
-                // either way, it isn't a toggle.
+                // A drag already happened, or this press/release was on one of the header's own
+                // buttons - either way, it isn't a toggle.
                 return;
             }
 
@@ -143,13 +143,16 @@ namespace ClipboardWizard.View.Control
             }
         }
 
-        private static bool IsDescendantOf(DependencyObject element, DependencyObject ancestor)
+        private static bool IsOnAnyOf(DependencyObject element, params DependencyObject[] ancestors)
         {
             while (element != null)
             {
-                if (ReferenceEquals(element, ancestor))
+                foreach (DependencyObject ancestor in ancestors)
                 {
-                    return true;
+                    if (ReferenceEquals(element, ancestor))
+                    {
+                        return true;
+                    }
                 }
 
                 element = VisualTreeHelper.GetParent(element);

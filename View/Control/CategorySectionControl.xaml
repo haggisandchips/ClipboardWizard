@@ -45,6 +45,32 @@
                     </Button.Style>
                     <fa5:FontAwesome Icon="Solid_Trash" FontSize="12" />
                 </Button>
+                <!-- Both hidden for the pinned Uncategorized section (IsPinned) - it has no
+                     backing category to pre-select, so it's only served by the global toolbar. -->
+                <Button x:Name="SaveClipboardContentsButton" DockPanel.Dock="Right" Command="{Binding SaveClipboardContents}" ToolTip="Add clipboard contents to this category" Background="Transparent" BorderThickness="0" Padding="6" Focusable="False">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <fa5:FontAwesome Icon="Solid_Plus" FontSize="12" />
+                </Button>
+                <Button x:Name="AddSnippetButton" DockPanel.Dock="Right" Command="{Binding AddSnippet}" ToolTip="New snippet in this category" Background="Transparent" BorderThickness="0" Padding="6" Focusable="False">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                    <fa5:FontAwesome Icon="Solid_PencilAlt" FontSize="12" />
+                </Button>
                 <DockPanel Margin="8 6">
                     <!-- fa5:FontAwesome derives from TextBlock, so it doesn't center itself
                          within extra vertical space the way most controls do - see the same

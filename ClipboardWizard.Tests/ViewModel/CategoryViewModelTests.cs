@@ -53,6 +53,39 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task AddNewSnippetAsync_DelegatesToHostWithSelf()
+        {
+            FakeCategoryHost host = new();
+            CategoryViewModel viewModel = new(new Category(), host);
+
+            await viewModel.AddNewSnippetAsync();
+
+            Assert.Same(viewModel, Assert.Single(host.AddSnippetCalls));
+        }
+
+        [Fact]
+        public async Task SaveClipboardSnippetAsync_DelegatesToHostWithSelf()
+        {
+            FakeCategoryHost host = new();
+            CategoryViewModel viewModel = new(new Category(), host);
+
+            await viewModel.SaveClipboardSnippetAsync();
+
+            Assert.Same(viewModel, Assert.Single(host.SaveClipboardSnippetCalls));
+        }
+
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void HasSaveableClipboardContent_ReflectsHost(bool hasContent)
+        {
+            FakeCategoryHost host = new() { HasSaveableClipboardContent = hasContent };
+            CategoryViewModel viewModel = new(new Category(), host);
+
+            Assert.Equal(hasContent, viewModel.HasSaveableClipboardContent);
+        }
+
+        [Fact]
         public void IsPinned_IsAlwaysFalse()
         {
             CategoryViewModel viewModel = new(new Category(), new FakeCategoryHost());

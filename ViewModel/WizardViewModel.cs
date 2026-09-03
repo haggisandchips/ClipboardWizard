@@ -189,13 +189,19 @@ namespace ClipboardWizard.ViewModel
             return section is CategoryViewModel category ? category.Category.Id : null;
         }
 
-        internal async Task AddNewSnippetAsync()
+        internal async Task AddNewSnippetAsync(int? categoryId = null)
         {
             // The owner must be set before ShowDialog so the dialog centers over it and
             // stays modal to the correct window.
             Window owner = Application.Current.MainWindow;
 
             EditSnippetViewModel editSnippetViewModel = new(Categories.Select(c => c.Category).ToList());
+            if (categoryId.HasValue)
+            {
+                editSnippetViewModel.SelectedCategory = editSnippetViewModel.Categories.FirstOrDefault(c => c.Id == categoryId)
+                    ?? EditSnippetViewModel.NoCategory;
+            }
+
             EditSnippetView editSnippetView = new()
             {
                 DataContext = editSnippetViewModel,
@@ -215,10 +221,22 @@ namespace ClipboardWizard.ViewModel
             await CreateSnippetAsync(content, editSnippetViewModel.Description, editSnippetViewModel.SelectedCategoryId);
         }
 
-        internal Task SaveClipboardSnippetAsync()
+        internal Task SaveClipboardSnippetAsync(int? categoryId = null)
         {
             ClipboardContent content = _clipboardMonitor.CurrentContent;
-            return IsSaveable(content) ? CreateSnippetAsync(content) : Task.CompletedTask;
+            return IsSaveable(content) ? CreateSnippetAsync(content, categoryId: categoryId) : Task.CompletedTask;
+        }
+
+        /// <summary>Opens the new-snippet dialog with categoryViewModel pre-selected - see ICategoryHost.</summary>
+        public Task AddSnippetAsync(CategoryViewModel categoryViewModel)
+        {
+            return AddNewSnippetAsync(categoryViewModel.Category.Id);
+        }
+
+        /// <summary>Saves the current clipboard contents straight into categoryViewModel - see ICategoryHost.</summary>
+        public Task SaveClipboardSnippetAsync(CategoryViewModel categoryViewModel)
+        {
+            return SaveClipboardSnippetAsync(categoryViewModel.Category.Id);
         }
 
         private void ClipboardMonitor_ContentCopied(object sender, ClipboardContent content)

@@ -43,13 +43,15 @@
     <DockPanel>
         <DockPanel DockPanel.Dock="Bottom" Margin="5">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                <Button Command="{Binding SaveClipboardContents}" Focusable="False">
+                <Button Command="{Binding AddSnippet}" Focusable="False" ToolTip="New Snippet" Margin="0 0 5 0">
+                    <fa5:FontAwesome Icon="Solid_PencilAlt" />
+                </Button>
+                <Button Command="{Binding SaveClipboardContents}" Focusable="False" ToolTip="Add">
                     <fa5:FontAwesome Icon="Solid_Plus" />
                 </Button>
             </StackPanel>
             <StackPanel Orientation="Horizontal">
-                <Button Command="{Binding AddCategory}" Focusable="False" Content="New Category" Margin="0 0 5 0" />
-                <Button Command="{Binding AddSnippet}" Focusable="False" Content="New Snippet" />
+                <Button Command="{Binding AddCategory}" Focusable="False" Content="New Category" />
             </StackPanel>
         </DockPanel>
         <DockPanel Margin="5">

@@ -475,6 +475,37 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task SaveClipboardSnippetAsync_WithCategoryId_CreatesSnippetInThatCategory()
+        {
+            var (viewModel, repository, categoryRepository, clipboard) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            clipboard.CurrentContent = new ClipboardContent { Type = ClipboardContentType.Text, Text = "note" };
+
+            await viewModel.SaveClipboardSnippetAsync(category.Category.Id);
+
+            SnippetViewModel saved = Assert.Single(category.Snippets);
+            Assert.Equal("note", saved.Snippet.Content);
+            Assert.Equal(1, repository.SaveCount);
+        }
+
+        [Fact]
+        public async Task SaveClipboardSnippetAsync_ByCategoryViewModel_CreatesSnippetInThatCategoryAndExpandsIt()
+        {
+            var (viewModel, _, categoryRepository, clipboard) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, IsExpanded = false });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            clipboard.CurrentContent = new ClipboardContent { Type = ClipboardContentType.Text, Text = "note" };
+
+            await ((ICategoryHost)viewModel).SaveClipboardSnippetAsync(category);
+
+            Assert.Contains(category.Snippets, s => s.Snippet.Content == "note");
+            Assert.True(category.IsExpanded);
+        }
+
+        [Fact]
         public async Task AddCategoryAsync_PersistsAndAddsToCategories()
         {
             var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();

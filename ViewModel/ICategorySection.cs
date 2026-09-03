@@ -22,5 +22,11 @@ namespace ClipboardWizard.ViewModel
 
         /// <summary>Null when IsPinned, since Uncategorized can't be deleted.</summary>
         ICommand Delete { get; }
+
+        /// <summary>Null when IsPinned - Uncategorized snippets are added via the global toolbar, not per-section.</summary>
+        ICommand AddSnippet { get; }
+
+        /// <summary>Null when IsPinned, same reasoning as AddSnippet.</summary>
+        ICommand SaveClipboardContents { get; }
     }
 }

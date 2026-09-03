@@ -11,6 +11,24 @@ namespace ClipboardWizard.Tests.Fakes
 
         public List<(CategoryViewModel Category, CategoryViewModel Target, bool InsertBefore)> MovedTo { get; } = new();
 
+        public List<CategoryViewModel> AddSnippetCalls { get; } = new();
+
+        public List<CategoryViewModel> SaveClipboardSnippetCalls { get; } = new();
+
+        public bool HasSaveableClipboardContent { get; set; }
+
+        public Task AddSnippetAsync(CategoryViewModel categoryViewModel)
+        {
+            AddSnippetCalls.Add(categoryViewModel);
+            return Task.CompletedTask;
+        }
+
+        public Task SaveClipboardSnippetAsync(CategoryViewModel categoryViewModel)
+        {
+            SaveClipboardSnippetCalls.Add(categoryViewModel);
+            return Task.CompletedTask;
+        }
+
         public Task UpdateCategoryAsync(Category category)
         {
             UpdatedCategories.Add(category);

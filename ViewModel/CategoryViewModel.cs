@@ -30,6 +30,14 @@ namespace ClipboardWizard.ViewModel
 
         ICommand ICategorySection.Delete => Delete;
 
+        public AddCategorySnippetCommand AddSnippet { get; }
+
+        ICommand ICategorySection.AddSnippet => AddSnippet;
+
+        public SaveCategoryClipboardContentsCommand SaveClipboardContents { get; }
+
+        ICommand ICategorySection.SaveClipboardContents => SaveClipboardContents;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         public CategoryViewModel(Category category, ICategoryHost host)
@@ -38,6 +46,8 @@ namespace ClipboardWizard.ViewModel
             _host = host;
 
             Delete = new(this);
+            AddSnippet = new(this);
+            SaveClipboardContents = new(this);
 
             // Category.Name/IsExpanded happen to share names with this wrapper's own
             // passthrough properties, so re-raising verbatim keeps bindings live - but with
@@ -79,6 +89,19 @@ namespace ClipboardWizard.ViewModel
         {
             IsExpanded = !IsExpanded;
             return _host.UpdateCategoryAsync(Category);
+        }
+
+        /// <summary>Whether the current clipboard contents could be saved as a snippet - backs SaveClipboardContents' enabled state.</summary>
+        internal bool HasSaveableClipboardContent => _host.HasSaveableClipboardContent;
+
+        internal Task AddNewSnippetAsync()
+        {
+            return _host.AddSnippetAsync(this);
+        }
+
+        internal Task SaveClipboardSnippetAsync()
+        {
+            return _host.SaveClipboardSnippetAsync(this);
         }
     }
 }
