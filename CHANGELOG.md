@@ -5,6 +5,18 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-09-03
+
+### Added
+
+- Adding a snippet now expands whichever section (category, or the
+  pinned Uncategorized bucket) receives it, if it was collapsed - a
+  newly added or auto-recorded snippet could otherwise land somewhere
+  invisible until you happened to expand it yourself.
+- Each category header now has its own New Snippet and Add icon
+  buttons, pre-populating that category - no need to pick it from the
+  New Snippet dialog's category list or drag the result afterward.
+
 ## [1.2.2] - 2026-08-13
 
 ### Fixed
