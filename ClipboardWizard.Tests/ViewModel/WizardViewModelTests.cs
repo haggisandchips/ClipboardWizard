@@ -432,6 +432,49 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task ClipboardChanged_CollapsedUncategorizedSection_ExpandsOnNewSnippet()
+        {
+            var (viewModel, repository, clipboard) = CreateSut();
+            await viewModel.LoadAsync();
+            viewModel.Recording = true;
+            viewModel.UncategorizedSection.IsExpanded = false;
+
+            clipboard.RaiseTextCopied("new content");
+            await Task.Delay(50); // the auto-save runs fire-and-forget off the event handler
+
+            Assert.True(viewModel.UncategorizedSection.IsExpanded);
+        }
+
+        [Fact]
+        public async Task CreateSnippetAsync_CollapsedTargetCategory_ExpandsAndPersists()
+        {
+            var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, IsExpanded = false });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            ClipboardContent content = new() { Type = ClipboardContentType.Text, Text = "note" };
+
+            await viewModel.CreateSnippetAsync(content, categoryId: category.Category.Id);
+
+            Assert.True(category.IsExpanded);
+            Assert.Equal(1, categoryRepository.UpdateCount);
+        }
+
+        [Fact]
+        public async Task CreateSnippetAsync_AlreadyExpandedTargetCategory_DoesNotPersistCategory()
+        {
+            var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, IsExpanded = true });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            ClipboardContent content = new() { Type = ClipboardContentType.Text, Text = "note" };
+
+            await viewModel.CreateSnippetAsync(content, categoryId: category.Category.Id);
+
+            Assert.Equal(0, categoryRepository.UpdateCount);
+        }
+
+        [Fact]
         public async Task AddCategoryAsync_PersistsAndAddsToCategories()
         {
             var (viewModel, _, categoryRepository, _) = CreateSutWithCategories();

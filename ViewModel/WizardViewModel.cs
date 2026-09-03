@@ -254,7 +254,7 @@ namespace ClipboardWizard.ViewModel
             }
         }
 
-        private async Task CreateSnippetAsync(ClipboardContent content, string description = null, int? categoryId = null)
+        internal async Task CreateSnippetAsync(ClipboardContent content, string description = null, int? categoryId = null)
         {
             ICategorySection section = GetSection(categoryId);
 
@@ -268,7 +268,20 @@ namespace ClipboardWizard.ViewModel
                 Order = section.Snippets.Count == 0 ? 0 : section.Snippets.Max(s => s.Snippet.Order) + 1
             };
 
-            await _repository.SaveSnippetAsync(snippet);
+            List<Task> updates = new() { _repository.SaveSnippetAsync(snippet) };
+
+            // A snippet landing in a collapsed section would be invisible until the user
+            // happens to expand it - so whichever section receives a new snippet expands too.
+            if (!section.IsExpanded)
+            {
+                section.IsExpanded = true;
+                if (section is CategoryViewModel categoryViewModel)
+                {
+                    updates.Add(UpdateCategoryAsync(categoryViewModel.Category));
+                }
+            }
+
+            await Task.WhenAll(updates);
 
             State state = Matches(snippet, _clipboardMonitor.CurrentContent) ? State.Active : State.Inactive;
             SnippetViewModel snippetViewModel = new(snippet, state, this);
