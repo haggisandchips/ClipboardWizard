@@ -31,6 +31,8 @@ namespace ClipboardWizard.ViewModel
 
         public bool IsPinned => true;
 
+        public bool NeedsFirebaseSetup => false;
+
         public ObservableCollection<SnippetViewModel> Snippets { get; } = new();
 
         public ICommand Delete => null;
@@ -38,6 +40,8 @@ namespace ClipboardWizard.ViewModel
         public ICommand AddSnippet => null;
 
         public ICommand SaveClipboardContents => null;
+
+        public ICommand Edit => null;
 
         public event PropertyChangedEventHandler PropertyChanged;
 

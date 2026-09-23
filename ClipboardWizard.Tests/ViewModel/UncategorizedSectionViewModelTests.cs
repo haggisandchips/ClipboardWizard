@@ -13,6 +13,8 @@ namespace ClipboardWizard.Tests.ViewModel
             Assert.True(viewModel.IsExpanded);
             Assert.True(viewModel.IsPinned);
             Assert.Null(viewModel.Delete);
+            Assert.Null(viewModel.Edit);
+            Assert.False(viewModel.NeedsFirebaseSetup);
             Assert.Equal("Uncategorized", viewModel.Name);
         }
 

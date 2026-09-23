@@ -1,4 +1,6 @@
+using ClipboardWizard.Model;
 using ClipboardWizard.Service;
+using ClipboardWizard.Service.Firestore;
 using ClipboardWizard.View;
 using ClipboardWizard.ViewModel;
 using System;
@@ -52,11 +54,23 @@ namespace ClipboardWizard
                 IClipboardMonitor clipboardMonitor = new SharpClipboardMonitor(new SharpClipboard());
                 IWindowSettingsService windowSettingsService = new WindowSettingsService(
                     Path.Combine(localAppPath, "WindowSettings.json"));
+                ISettingsService settingsService = new SettingsService(
+                    Path.Combine(localAppPath, "FirestoreSettings.json"));
+                IFirestoreSyncService firestoreSyncService = new FirestoreSyncService();
 
-                WizardViewModel viewModel = new(repository, categoryRepository, clipboardMonitor);
+                WizardViewModel viewModel = new(repository, categoryRepository, clipboardMonitor, settingsService, firestoreSyncService);
+                firestoreSyncService.Sink = viewModel;
                 await viewModel.LoadAsync();
 
+                FirestoreCredentials firestoreCredentials = settingsService.Load();
+                if (firestoreCredentials != null)
+                {
+                    firestoreSyncService.Configure(firestoreCredentials);
+                }
+                firestoreSyncService.Start();
+
                 WizardView wizardView = new(viewModel, windowSettingsService);
+                wizardView.Closed += (_, _) => firestoreSyncService.Stop();
                 wizardView.Show();
 
                 // Fire-and-forget: an update check is a nice-to-have, not something that

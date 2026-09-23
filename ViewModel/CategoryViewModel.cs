@@ -1,5 +1,8 @@
 using ClipboardWizard.Model;
+using ClipboardWizard.Service.Firestore;
+using ClipboardWizard.View;
 using ClipboardWizard.ViewModel.Command;
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading.Tasks;
@@ -11,6 +14,7 @@ namespace ClipboardWizard.ViewModel
     public class CategoryViewModel : ICategorySection
     {
         private readonly ICategoryHost _host;
+        private readonly IFirestoreStatusProvider _firestoreStatus;
 
         public Category Category { get; }
 
@@ -24,9 +28,14 @@ namespace ClipboardWizard.ViewModel
 
         public bool IsPinned => false;
 
+        /// <summary>Drives the category header's "Firebase setup required" warning icon - true only when this category opted into sharing but the app isn't actually connected.</summary>
+        public bool NeedsFirebaseSetup => Category.Shared && _firestoreStatus.State != FirestoreConnectionState.Connected;
+
         public ObservableCollection<SnippetViewModel> Snippets { get; } = new();
 
         public DeleteCategoryCommand Delete { get; }
+
+        public EditCategoryCommand Edit { get; }
 
         ICommand ICategorySection.Delete => Delete;
 
@@ -38,16 +47,20 @@ namespace ClipboardWizard.ViewModel
 
         ICommand ICategorySection.SaveClipboardContents => SaveClipboardContents;
 
+        ICommand ICategorySection.Edit => Edit;
+
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public CategoryViewModel(Category category, ICategoryHost host)
+        public CategoryViewModel(Category category, ICategoryHost host, IFirestoreStatusProvider firestoreStatus)
         {
             Category = category;
             _host = host;
+            _firestoreStatus = firestoreStatus;
 
             Delete = new(this);
             AddSnippet = new(this);
             SaveClipboardContents = new(this);
+            Edit = new(this);
 
             // Category.Name/IsExpanded happen to share names with this wrapper's own
             // passthrough properties, so re-raising verbatim keeps bindings live - but with
@@ -55,13 +68,24 @@ namespace ClipboardWizard.ViewModel
             // registry by the object bindings were registered against (this CategoryViewModel),
             // so simply forwarding Category's own event (sender = Category) would fire
             // notifications the binding system can't match back to any listener.
-            Category.PropertyChanged += (_, e) => PropertyChanged?.Invoke(this, e);
+            Category.PropertyChanged += (_, e) =>
+            {
+                PropertyChanged?.Invoke(this, e);
+                if (e.PropertyName == nameof(Category.Shared))
+                {
+                    OnPropertyChanged(nameof(NeedsFirebaseSetup));
+                }
+            };
+
+            _firestoreStatus.StateChanged += (_, _) => OnPropertyChanged(nameof(NeedsFirebaseSetup));
         }
 
         /// <summary>
         /// Deleting a category isn't a single click: unlike a snippet (which is protected by an
         /// explicit lock step, see SnippetViewModel), a category has no such per-item opt-in, so
-        /// every delete confirms here instead.
+        /// every delete confirms here instead. A Shared category gets a second prompt asking
+        /// whether to also remove it from Firebase - distinct from un-sharing (the Shared
+        /// checkbox), which never touches already-pushed Firebase data.
         /// </summary>
         internal async Task DeleteCategoryAsync()
         {
@@ -76,7 +100,39 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            await _host.DeleteCategoryAsync(this);
+            bool alsoDeleteFromFirebase = false;
+            if (Category.Shared)
+            {
+                MessageBoxResult firebaseResult = MessageBox.Show(
+                    "This category is Shared. Also delete it from Firebase, for every device? Choosing No leaves the cloud copy in place.",
+                    "Clipboard Wizard",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                alsoDeleteFromFirebase = firebaseResult == MessageBoxResult.Yes;
+            }
+
+            await _host.DeleteCategoryAsync(this, alsoDeleteFromFirebase);
+        }
+
+        internal async Task EditCategoryAsync()
+        {
+            Window owner = Application.Current.MainWindow;
+
+            AddCategoryViewModel editViewModel = new(Category, _firestoreStatus);
+            AddCategoryView editView = new()
+            {
+                DataContext = editViewModel,
+                Owner = owner
+            };
+
+            bool? result = editView.ShowDialog();
+            if (result != true)
+            {
+                return;
+            }
+
+            await _host.ApplyCategoryEditAsync(this, editViewModel.Name, editViewModel.Shared);
         }
 
         /// <summary>Drag-and-drop reordering: moves this category immediately before/after <paramref name="target"/>.</summary>
@@ -102,6 +158,11 @@ namespace ClipboardWizard.ViewModel
         internal Task SaveClipboardSnippetAsync()
         {
             return _host.SaveClipboardSnippetAsync(this);
+        }
+
+        private void OnPropertyChanged(string propertyName)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

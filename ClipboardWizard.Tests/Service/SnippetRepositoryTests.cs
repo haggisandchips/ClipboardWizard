@@ -127,6 +127,30 @@ namespace ClipboardWizard.Tests.Service
             Assert.True(Assert.Single(loaded).Locked);
         }
 
+        [Fact]
+        public async Task SyncFields_RoundTrip()
+        {
+            DateTime modifiedAtUtc = new(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+            Snippet snippet = new() { Content = "shared", Order = 0, SyncId = "abc123", ModifiedAtUtc = modifiedAtUtc };
+
+            await _repository.SaveSnippetAsync(snippet);
+            Snippet loaded = Assert.Single(await _repository.LoadSnippetsAsync());
+
+            Assert.Equal("abc123", loaded.SyncId);
+            Assert.Equal(modifiedAtUtc, loaded.ModifiedAtUtc);
+        }
+
+        [Fact]
+        public async Task SyncId_DefaultsToNull()
+        {
+            Snippet snippet = new() { Content = "not yet shared", Order = 0 };
+
+            await _repository.SaveSnippetAsync(snippet);
+            Snippet loaded = Assert.Single(await _repository.LoadSnippetsAsync());
+
+            Assert.Null(loaded.SyncId);
+        }
+
         public void Dispose()
         {
             try

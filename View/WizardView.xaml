@@ -37,6 +37,9 @@
     <mah:MetroWindow.RightWindowCommands>
         <mah:WindowCommands x:Name="RightWindowCommandsHost">
             <mah:ToggleSwitch  OnContent="Recording ON" OffContent="Recording OFF" IsOn="{Binding Recording, Mode=TwoWay}" Foreground="White" />
+            <Button Command="{Binding OpenSettings}" Focusable="False" ToolTip="Firebase Settings">
+                <fa5:FontAwesome Icon="Solid_Cog" Foreground="White" />
+            </Button>
         </mah:WindowCommands>
     </mah:MetroWindow.RightWindowCommands>
 

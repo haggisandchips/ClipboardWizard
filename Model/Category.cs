@@ -1,4 +1,5 @@
 using SQLite;
+using System;
 using System.ComponentModel;
 
 namespace ClipboardWizard.Model
@@ -38,6 +39,53 @@ namespace ClipboardWizard.Model
             {
                 _isExpanded = value;
                 OnPropertyChanged(nameof(IsExpanded));
+            }
+        }
+
+        private bool _shared;
+
+        /// <summary>
+        /// Whether this category's snippets sync to Firestore. Existing rows created before
+        /// this column existed default to false, which is correct for them since sharing is
+        /// opt-in.
+        /// </summary>
+        public bool Shared
+        {
+            get => _shared;
+            set
+            {
+                _shared = value;
+                OnPropertyChanged(nameof(Shared));
+            }
+        }
+
+        private string _syncId;
+
+        /// <summary>
+        /// Globally-unique id used as this category's Firestore document id. Null until the
+        /// category is shared for the first time - assigned lazily at that point rather than
+        /// up front, since most categories are never shared.
+        /// </summary>
+        public string SyncId
+        {
+            get => _syncId;
+            set
+            {
+                _syncId = value;
+                OnPropertyChanged(nameof(SyncId));
+            }
+        }
+
+        private DateTime _modifiedAtUtc;
+
+        /// <summary>Last-writer-wins timestamp for reconciling this category against remote edits. Only meaningful once Shared.</summary>
+        public DateTime ModifiedAtUtc
+        {
+            get => _modifiedAtUtc;
+            set
+            {
+                _modifiedAtUtc = value;
+                OnPropertyChanged(nameof(ModifiedAtUtc));
             }
         }
 

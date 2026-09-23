@@ -119,10 +119,10 @@ namespace ClipboardWizard.View.Control
 
             if (wasDragging
                 || DataContext is not ICategorySection section
-                || (e.OriginalSource is DependencyObject source && IsOnAnyOf(source, DeleteButton, SaveClipboardContentsButton, AddSnippetButton)))
+                || (e.OriginalSource is DependencyObject source && IsOnAnyOf(source, DeleteButton, EditButton, SaveClipboardContentsButton, AddSnippetButton, FirebaseWarningIcon)))
             {
                 // A drag already happened, or this press/release was on one of the header's own
-                // buttons - either way, it isn't a toggle.
+                // buttons or the Firebase warning icon - either way, it isn't a toggle.
                 return;
             }
 
@@ -140,6 +140,15 @@ namespace ClipboardWizard.View.Control
             catch (Exception ex)
             {
                 CommandErrorHandler.Handle(nameof(CategorySectionControl), ex);
+            }
+        }
+
+        private void FirebaseWarningIcon_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+            if (Application.Current.MainWindow?.DataContext is WizardViewModel wizardViewModel
+                && wizardViewModel.OpenSettings.CanExecute(null))
+            {
+                wizardViewModel.OpenSettings.Execute(null);
             }
         }
 

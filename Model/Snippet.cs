@@ -1,4 +1,5 @@
 ﻿using SQLite;
+using System;
 using System.ComponentModel;
 
 namespace ClipboardWizard.Model
@@ -104,6 +105,36 @@ namespace ClipboardWizard.Model
 
                 _locked = value;
                 OnPropertyChanged(nameof(Locked));
+            }
+        }
+
+        private string _syncId;
+
+        /// <summary>
+        /// Globally-unique id used as this snippet's Firestore document id. Null until the
+        /// snippet's category is shared for the first time - assigned lazily at that point,
+        /// since most snippets are never shared.
+        /// </summary>
+        public string SyncId
+        {
+            get => _syncId;
+            set
+            {
+                _syncId = value;
+                OnPropertyChanged(nameof(SyncId));
+            }
+        }
+
+        private DateTime _modifiedAtUtc;
+
+        /// <summary>Last-writer-wins timestamp for reconciling this snippet against remote edits. Only meaningful once its category is Shared.</summary>
+        public DateTime ModifiedAtUtc
+        {
+            get => _modifiedAtUtc;
+            set
+            {
+                _modifiedAtUtc = value;
+                OnPropertyChanged(nameof(ModifiedAtUtc));
             }
         }
 

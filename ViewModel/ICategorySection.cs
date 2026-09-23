@@ -18,6 +18,9 @@ namespace ClipboardWizard.ViewModel
         /// <summary>True for the Uncategorized section: can't be deleted or dragged to reorder.</summary>
         bool IsPinned { get; }
 
+        /// <summary>Always false for the pinned Uncategorized section - it has no Shared flag to warn about.</summary>
+        bool NeedsFirebaseSetup { get; }
+
         ObservableCollection<SnippetViewModel> Snippets { get; }
 
         /// <summary>Null when IsPinned, since Uncategorized can't be deleted.</summary>
@@ -28,5 +31,8 @@ namespace ClipboardWizard.ViewModel
 
         /// <summary>Null when IsPinned, same reasoning as AddSnippet.</summary>
         ICommand SaveClipboardContents { get; }
+
+        /// <summary>Null when IsPinned, since Uncategorized has no name/Shared flag to edit.</summary>
+        ICommand Edit { get; }
     }
 }

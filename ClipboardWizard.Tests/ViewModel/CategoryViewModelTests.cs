@@ -1,4 +1,5 @@
 using ClipboardWizard.Model;
+using ClipboardWizard.Service.Firestore;
 using ClipboardWizard.Tests.Fakes;
 using ClipboardWizard.ViewModel;
 
@@ -10,8 +11,8 @@ namespace ClipboardWizard.Tests.ViewModel
         public async Task MoveToAsync_DelegatesToHostWithSelfTargetAndSide()
         {
             FakeCategoryHost host = new();
-            CategoryViewModel dragged = new(new Category(), host);
-            CategoryViewModel target = new(new Category(), host);
+            CategoryViewModel dragged = new(new Category(), host, new FakeFirestoreStatusProvider());
+            CategoryViewModel target = new(new Category(), host, new FakeFirestoreStatusProvider());
 
             await dragged.MoveToAsync(target, insertBefore: true);
 
@@ -30,7 +31,7 @@ namespace ClipboardWizard.Tests.ViewModel
         {
             FakeCategoryHost host = new();
             Category category = new() { IsExpanded = true };
-            CategoryViewModel viewModel = new(category, host);
+            CategoryViewModel viewModel = new(category, host, new FakeFirestoreStatusProvider());
 
             await viewModel.ToggleExpandedAsync();
 
@@ -43,7 +44,7 @@ namespace ClipboardWizard.Tests.ViewModel
         public async Task ToggleExpandedAsync_TogglesBothWays()
         {
             FakeCategoryHost host = new();
-            CategoryViewModel viewModel = new(new Category { IsExpanded = false }, host);
+            CategoryViewModel viewModel = new(new Category { IsExpanded = false }, host, new FakeFirestoreStatusProvider());
 
             await viewModel.ToggleExpandedAsync();
             Assert.True(viewModel.IsExpanded);
@@ -56,7 +57,7 @@ namespace ClipboardWizard.Tests.ViewModel
         public async Task AddNewSnippetAsync_DelegatesToHostWithSelf()
         {
             FakeCategoryHost host = new();
-            CategoryViewModel viewModel = new(new Category(), host);
+            CategoryViewModel viewModel = new(new Category(), host, new FakeFirestoreStatusProvider());
 
             await viewModel.AddNewSnippetAsync();
 
@@ -67,7 +68,7 @@ namespace ClipboardWizard.Tests.ViewModel
         public async Task SaveClipboardSnippetAsync_DelegatesToHostWithSelf()
         {
             FakeCategoryHost host = new();
-            CategoryViewModel viewModel = new(new Category(), host);
+            CategoryViewModel viewModel = new(new Category(), host, new FakeFirestoreStatusProvider());
 
             await viewModel.SaveClipboardSnippetAsync();
 
@@ -80,7 +81,7 @@ namespace ClipboardWizard.Tests.ViewModel
         public void HasSaveableClipboardContent_ReflectsHost(bool hasContent)
         {
             FakeCategoryHost host = new() { HasSaveableClipboardContent = hasContent };
-            CategoryViewModel viewModel = new(new Category(), host);
+            CategoryViewModel viewModel = new(new Category(), host, new FakeFirestoreStatusProvider());
 
             Assert.Equal(hasContent, viewModel.HasSaveableClipboardContent);
         }
@@ -88,7 +89,7 @@ namespace ClipboardWizard.Tests.ViewModel
         [Fact]
         public void IsPinned_IsAlwaysFalse()
         {
-            CategoryViewModel viewModel = new(new Category(), new FakeCategoryHost());
+            CategoryViewModel viewModel = new(new Category(), new FakeCategoryHost(), new FakeFirestoreStatusProvider());
 
             Assert.False(viewModel.IsPinned);
         }
@@ -102,13 +103,54 @@ namespace ClipboardWizard.Tests.ViewModel
             // the wrapped Category) is silently unmatched and dropped, so bound UI never
             // updates even though the underlying value did change.
             Category category = new();
-            CategoryViewModel viewModel = new(category, new FakeCategoryHost());
+            CategoryViewModel viewModel = new(category, new FakeCategoryHost(), new FakeFirestoreStatusProvider());
             object? raisedBy = null;
             viewModel.PropertyChanged += (sender, _) => raisedBy = sender;
 
             category.IsExpanded = !category.IsExpanded;
 
             Assert.Same(viewModel, raisedBy);
+        }
+
+        [Fact]
+        public void NeedsFirebaseSetup_FalseWhenNotShared()
+        {
+            CategoryViewModel viewModel = new(new Category { Shared = false }, new FakeCategoryHost(), new FakeFirestoreStatusProvider());
+
+            Assert.False(viewModel.NeedsFirebaseSetup);
+        }
+
+        [Fact]
+        public void NeedsFirebaseSetup_TrueWhenSharedAndNotConnected()
+        {
+            CategoryViewModel viewModel = new(new Category { Shared = true }, new FakeCategoryHost(), new FakeFirestoreStatusProvider());
+
+            Assert.True(viewModel.NeedsFirebaseSetup);
+        }
+
+        [Fact]
+        public void NeedsFirebaseSetup_UpdatesWhenConnectionStateChanges()
+        {
+            FakeFirestoreStatusProvider status = new();
+            CategoryViewModel viewModel = new(new Category { Shared = true }, new FakeCategoryHost(), status);
+            Assert.True(viewModel.NeedsFirebaseSetup);
+
+            status.State = FirestoreConnectionState.Connected;
+
+            Assert.False(viewModel.NeedsFirebaseSetup);
+        }
+
+        [Fact]
+        public void NeedsFirebaseSetup_RaisesPropertyChanged_WhenSharedFlagChanges()
+        {
+            Category category = new() { Shared = false };
+            CategoryViewModel viewModel = new(category, new FakeCategoryHost(), new FakeFirestoreStatusProvider());
+            List<string?> raised = new();
+            viewModel.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+            category.Shared = true;
+
+            Assert.Contains(nameof(CategoryViewModel.NeedsFirebaseSetup), raised);
         }
     }
 }

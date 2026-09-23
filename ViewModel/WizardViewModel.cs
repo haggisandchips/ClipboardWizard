@@ -1,5 +1,6 @@
 using ClipboardWizard.Model;
 using ClipboardWizard.Service;
+using ClipboardWizard.Service.Firestore;
 using ClipboardWizard.View;
 using ClipboardWizard.ViewModel.Command;
 using System;
@@ -9,14 +10,17 @@ using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading;
 
 namespace ClipboardWizard.ViewModel
 {
-    public class WizardViewModel : INotifyPropertyChanged, ISnippetHost, ICategoryHost
+    public class WizardViewModel : INotifyPropertyChanged, ISnippetHost, ICategoryHost, IFirestoreSyncEventSink
     {
         private readonly ISnippetRepository _repository;
         private readonly ICategoryRepository _categoryRepository;
         private readonly IClipboardMonitor _clipboardMonitor;
+        private readonly ISettingsService _settingsService;
+        private readonly IFirestoreSyncService _firestoreSyncService;
 
         /// <summary>Every snippet, regardless of category - used for clipboard-match scanning, which doesn't care about categories.</summary>
         public ObservableCollection<SnippetViewModel> SnippetViewModels { get; } = new();
@@ -45,6 +49,8 @@ namespace ClipboardWizard.ViewModel
 
         public AddCategoryCommand AddCategory { get; }
 
+        public OpenSettingsCommand OpenSettings { get; }
+
         /// <summary>Text content of the clipboard, for the (text-only) edit dialog's Active check.</summary>
         public string ClipboardText => _clipboardMonitor.CurrentContent is { Type: ClipboardContentType.Text } content ? content.Text ?? string.Empty : string.Empty;
 
@@ -52,17 +58,25 @@ namespace ClipboardWizard.ViewModel
 
         public event PropertyChangedEventHandler PropertyChanged;
 
-        public WizardViewModel(ISnippetRepository repository, ICategoryRepository categoryRepository, IClipboardMonitor clipboardMonitor)
+        public WizardViewModel(
+            ISnippetRepository repository,
+            ICategoryRepository categoryRepository,
+            IClipboardMonitor clipboardMonitor,
+            ISettingsService settingsService,
+            IFirestoreSyncService firestoreSyncService)
         {
             _repository = repository;
             _categoryRepository = categoryRepository;
             _clipboardMonitor = clipboardMonitor;
+            _settingsService = settingsService;
+            _firestoreSyncService = firestoreSyncService;
 
             _clipboardMonitor.ContentCopied += ClipboardMonitor_ContentCopied;
 
             SaveClipboardContents = new(this);
             AddSnippet = new(this);
             AddCategory = new(this);
+            OpenSettings = new(this);
         }
 
         public async Task LoadAsync()
@@ -70,7 +84,7 @@ namespace ClipboardWizard.ViewModel
             List<Category> categories = await _categoryRepository.LoadCategoriesAsync();
             foreach (Category category in categories)
             {
-                Categories.Add(new CategoryViewModel(category, this));
+                Categories.Add(new CategoryViewModel(category, this, _firestoreSyncService));
             }
 
             List<Snippet> snippets = await _repository.LoadSnippetsAsync();
@@ -95,13 +109,19 @@ namespace ClipboardWizard.ViewModel
             return category ?? (ICategorySection)UncategorizedSection;
         }
 
+        /// <summary>The Category a snippet with this CategoryId belongs to, or null for Uncategorized/unknown - used to decide whether a snippet mutation should push to Firestore.</summary>
+        private Category GetOwningCategoryOrNull(int? categoryId)
+        {
+            return categoryId == null ? null : Categories.FirstOrDefault(c => c.Category.Id == categoryId)?.Category;
+        }
+
         internal async Task AddNewCategoryAsync()
         {
             // The owner must be set before ShowDialog so the dialog centers over it and
             // stays modal to the correct window.
             Window owner = Application.Current.MainWindow;
 
-            AddCategoryViewModel addCategoryViewModel = new();
+            AddCategoryViewModel addCategoryViewModel = new(_firestoreSyncService);
             AddCategoryView addCategoryView = new()
             {
                 DataContext = addCategoryViewModel,
@@ -115,27 +135,80 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            await AddCategoryAsync(addCategoryViewModel.Name);
+            await AddCategoryAsync(addCategoryViewModel.Name, addCategoryViewModel.Shared);
         }
 
-        internal async Task AddCategoryAsync(string name)
+        internal async Task AddCategoryAsync(string name, bool shared = false)
         {
             if (string.IsNullOrWhiteSpace(name))
             {
                 return;
             }
 
-            Category category = new() { Name = name.Trim(), Order = GetNextCategoryOrder() };
+            Category category = new() { Name = name.Trim(), Order = GetNextCategoryOrder(), Shared = shared };
+            if (shared)
+            {
+                category.SyncId = Guid.NewGuid().ToString("N");
+                category.ModifiedAtUtc = DateTime.UtcNow;
+            }
+
             await _categoryRepository.SaveCategoryAsync(category);
-            Categories.Add(new CategoryViewModel(category, this));
+            Categories.Add(new CategoryViewModel(category, this, _firestoreSyncService));
+
+            if (shared)
+            {
+                await TryPushCategoryBulkAsync(category, Array.Empty<Snippet>());
+            }
         }
 
+        /// <summary>Local-only persistence (e.g. IsExpanded) - never pushes to Firestore. See ApplyCategoryEditAsync for renames/Shared changes, which do.</summary>
         public Task UpdateCategoryAsync(Category category)
         {
             return _categoryRepository.UpdateCategoryAsync(category);
         }
 
-        public async Task DeleteCategoryAsync(CategoryViewModel categoryViewModel)
+        public async Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool newShared)
+        {
+            Category category = categoryViewModel.Category;
+            bool justEnabledSharing = newShared && !category.Shared;
+
+            category.Name = newName?.Trim();
+            category.Shared = newShared;
+
+            if (justEnabledSharing)
+            {
+                category.SyncId ??= Guid.NewGuid().ToString("N");
+            }
+            if (newShared)
+            {
+                category.ModifiedAtUtc = DateTime.UtcNow;
+            }
+
+            await _categoryRepository.UpdateCategoryAsync(category);
+
+            if (justEnabledSharing)
+            {
+                // Initial bulk push: the category document, then every snippet currently in it.
+                List<Snippet> snippets = categoryViewModel.Snippets.Select(s => s.Snippet).ToList();
+                foreach (Snippet snippet in snippets)
+                {
+                    snippet.SyncId ??= Guid.NewGuid().ToString("N");
+                    snippet.ModifiedAtUtc = DateTime.UtcNow;
+                    await _repository.UpdateSnippetAsync(snippet);
+                }
+
+                await TryPushCategoryBulkAsync(category, snippets);
+            }
+            else if (newShared)
+            {
+                // Still shared (e.g. just renamed) - push the updated category doc so the change propagates.
+                await TryPushCategoryAsync(category);
+            }
+            // Shared true -> false: nothing further. The push wrappers already gate on
+            // category.Shared, so already-pushed Firestore data is simply left as-is (SPEC).
+        }
+
+        public async Task DeleteCategoryAsync(CategoryViewModel categoryViewModel, bool alsoDeleteFromFirebase = false)
         {
             // The category's snippets survive as uncategorized, not deleted with it.
             List<Task> updates = new();
@@ -144,13 +217,18 @@ namespace ClipboardWizard.ViewModel
                 categoryViewModel.Snippets.Remove(snippetViewModel);
                 snippetViewModel.Snippet.CategoryId = null;
                 UncategorizedSection.Snippets.Add(snippetViewModel);
-                updates.Add(_repository.UpdateSnippetAsync(snippetViewModel.Snippet));
+                updates.Add(UpdateSnippetAsync(snippetViewModel.Snippet));
             }
             updates.AddRange(RenumberSection(UncategorizedSection));
             await Task.WhenAll(updates);
 
             await _categoryRepository.DeleteCategoryAsync(categoryViewModel.Category);
             Categories.Remove(categoryViewModel);
+
+            if (alsoDeleteFromFirebase && categoryViewModel.Category.SyncId != null)
+            {
+                await TryDeleteRemoteCategoryAsync(categoryViewModel.Category.SyncId);
+            }
         }
 
         /// <summary>Assigns snippetViewModel to the category with this id (or Uncategorized if null) - see ISnippetHost.</summary>
@@ -178,7 +256,7 @@ namespace ClipboardWizard.ViewModel
             snippetViewModel.Snippet.CategoryId = CategoryIdOf(targetSection);
             targetSection.Snippets.Add(snippetViewModel);
 
-            List<Task> updates = new() { _repository.UpdateSnippetAsync(snippetViewModel.Snippet) };
+            List<Task> updates = new() { UpdateSnippetAsync(snippetViewModel.Snippet) };
             updates.AddRange(RenumberSection(sourceSection));
             updates.AddRange(RenumberSection(targetSection));
             return Task.WhenAll(updates);
@@ -239,6 +317,29 @@ namespace ClipboardWizard.ViewModel
             return SaveClipboardSnippetAsync(categoryViewModel.Category.Id);
         }
 
+        internal async Task OpenSettingsAsync()
+        {
+            Window owner = Application.Current.MainWindow;
+
+            FirestoreCredentials existing = _settingsService.Load();
+            SettingsViewModel settingsViewModel = new(existing, _firestoreSyncService);
+            SettingsView settingsView = new()
+            {
+                DataContext = settingsViewModel,
+                Owner = owner
+            };
+
+            bool? result = settingsView.ShowDialog();
+            if (result != true)
+            {
+                return;
+            }
+
+            FirestoreCredentials credentials = settingsViewModel.ToCredentials();
+            _settingsService.Save(credentials);
+            _firestoreSyncService.Configure(credentials);
+        }
+
         private void ClipboardMonitor_ContentCopied(object sender, ClipboardContent content)
         {
             bool matched = false;
@@ -286,7 +387,7 @@ namespace ClipboardWizard.ViewModel
                 Order = section.Snippets.Count == 0 ? 0 : section.Snippets.Max(s => s.Snippet.Order) + 1
             };
 
-            List<Task> updates = new() { _repository.SaveSnippetAsync(snippet) };
+            List<Task> updates = new() { SaveSnippetAsync(snippet) };
 
             // A snippet landing in a collapsed section would be invisible until the user
             // happens to expand it - so whichever section receives a new snippet expands too.
@@ -335,16 +436,116 @@ namespace ClipboardWizard.ViewModel
             };
         }
 
-        public Task UpdateSnippetAsync(Snippet snippet)
+        #region Snippet persistence wrappers - the only place a snippet push is ever triggered
+
+        /// <summary>Persists a new snippet locally, then pushes it if its category is Shared.</summary>
+        private async Task SaveSnippetAsync(Snippet snippet)
         {
-            return _repository.UpdateSnippetAsync(snippet);
+            StampForSyncIfOwningCategoryShared(snippet);
+            await _repository.SaveSnippetAsync(snippet);
+            await TryPushSnippetAsync(snippet);
         }
+
+        public async Task UpdateSnippetAsync(Snippet snippet)
+        {
+            StampForSyncIfOwningCategoryShared(snippet);
+            await _repository.UpdateSnippetAsync(snippet);
+            await TryPushSnippetAsync(snippet);
+        }
+
+        private void StampForSyncIfOwningCategoryShared(Snippet snippet)
+        {
+            Category category = GetOwningCategoryOrNull(snippet.CategoryId);
+            if (category is not { Shared: true })
+            {
+                return;
+            }
+
+            snippet.SyncId ??= Guid.NewGuid().ToString("N");
+            snippet.ModifiedAtUtc = DateTime.UtcNow;
+        }
+
+        private async Task TryPushSnippetAsync(Snippet snippet)
+        {
+            Category category = GetOwningCategoryOrNull(snippet.CategoryId);
+            if (category is not { Shared: true })
+            {
+                return;
+            }
+
+            try
+            {
+                await _firestoreSyncService.PushSnippetAsync(category, snippet);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(TryPushSnippetAsync), ex);
+            }
+        }
+
+        private async Task TryPushCategoryAsync(Category category)
+        {
+            try
+            {
+                await _firestoreSyncService.PushCategoryAsync(category);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(TryPushCategoryAsync), ex);
+            }
+        }
+
+        private async Task TryPushCategoryBulkAsync(Category category, IReadOnlyList<Snippet> snippets)
+        {
+            try
+            {
+                await _firestoreSyncService.PushCategoryBulkAsync(category, snippets);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(TryPushCategoryBulkAsync), ex);
+            }
+        }
+
+        private async Task TryDeleteRemoteSnippetAsync(Category category, Snippet snippet)
+        {
+            try
+            {
+                await _firestoreSyncService.DeleteRemoteSnippetAsync(category.SyncId, snippet.SyncId);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(TryDeleteRemoteSnippetAsync), ex);
+            }
+        }
+
+        private async Task TryDeleteRemoteCategoryAsync(string categorySyncId)
+        {
+            try
+            {
+                await _firestoreSyncService.DeleteRemoteCategoryAsync(categorySyncId);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(TryDeleteRemoteCategoryAsync), ex);
+            }
+        }
+
+        #endregion
 
         public async Task RemoveSnippetAsync(SnippetViewModel snippetViewModel)
         {
-            await _repository.DeleteSnippetAsync(snippetViewModel.Snippet);
+            Snippet snippet = snippetViewModel.Snippet;
+            Category category = GetOwningCategoryOrNull(snippet.CategoryId);
+
+            await _repository.DeleteSnippetAsync(snippet);
             SnippetViewModels.Remove(snippetViewModel);
-            GetSection(snippetViewModel.Snippet.CategoryId).Snippets.Remove(snippetViewModel);
+            GetSection(snippet.CategoryId).Snippets.Remove(snippetViewModel);
+
+            if (category is { Shared: true } && snippet.SyncId != null)
+            {
+                await TryDeleteRemoteSnippetAsync(category, snippet);
+            }
         }
 
         /// <summary>
@@ -424,7 +625,7 @@ namespace ClipboardWizard.ViewModel
                 snippetViewModel.Snippet.CategoryId = CategoryIdOf(targetSection);
                 targetSection.Snippets.Insert(insertIndex, snippetViewModel);
 
-                updates.Add(_repository.UpdateSnippetAsync(snippetViewModel.Snippet));
+                updates.Add(UpdateSnippetAsync(snippetViewModel.Snippet));
                 updates.AddRange(RenumberSection(sourceSection));
             }
             else
@@ -473,7 +674,7 @@ namespace ClipboardWizard.ViewModel
                 if (snippet.Order != i)
                 {
                     snippet.Order = i;
-                    updates.Add(_repository.UpdateSnippetAsync(snippet));
+                    updates.Add(UpdateSnippetAsync(snippet));
                 }
             }
             return updates;
@@ -483,6 +684,171 @@ namespace ClipboardWizard.ViewModel
         {
             return Categories.Count == 0 ? 0 : Categories.Max(c => c.Category.Order) + 1;
         }
+
+        #region IFirestoreSyncEventSink - remote-originated changes, applied on the UI thread
+
+        public void OnConnectionStateChanged(FirestoreConnectionState state)
+        {
+            // No action needed: each CategoryViewModel subscribes to the same
+            // IFirestoreStatusProvider directly and re-raises its own NeedsFirebaseSetup.
+        }
+
+        public Task OnRemoteCategoryPutAsync(RemoteCategorySnapshot snapshot)
+        {
+            return RunOnUiThreadAsync(() => ApplyRemoteCategoryPutAsync(snapshot));
+        }
+
+        public Task OnRemoteCategoryDeletedAsync(string categorySyncId)
+        {
+            return RunOnUiThreadAsync(() => ApplyRemoteCategoryDeletedAsync(categorySyncId));
+        }
+
+        public Task OnRemoteSnippetPutAsync(string categorySyncId, RemoteSnippetSnapshot snapshot)
+        {
+            return RunOnUiThreadAsync(() => ApplyRemoteSnippetPutAsync(categorySyncId, snapshot));
+        }
+
+        public Task OnRemoteSnippetDeletedAsync(string categorySyncId, string snippetSyncId)
+        {
+            return RunOnUiThreadAsync(() => ApplyRemoteSnippetDeletedAsync(categorySyncId, snippetSyncId));
+        }
+
+        /// <summary>
+        /// Marshals onto the WPF dispatcher thread, since Firestore's Listen() callbacks run on
+        /// an SDK-managed background thread and these handlers mutate data-bound ObservableCollections.
+        /// Falls back to running inline when there's no live WPF Application (e.g. under the xunit
+        /// test host), so this stays directly unit-testable without spinning up a Dispatcher loop.
+        /// </summary>
+        private static Task RunOnUiThreadAsync(Func<Task> action)
+        {
+            Dispatcher dispatcher = Application.Current?.Dispatcher;
+            return dispatcher == null ? action() : dispatcher.InvokeAsync(action).Task.Unwrap();
+        }
+
+        private async Task ApplyRemoteCategoryPutAsync(RemoteCategorySnapshot snapshot)
+        {
+            CategoryViewModel existing = Categories.FirstOrDefault(c => c.Category.SyncId == snapshot.SyncId);
+
+            if (existing == null)
+            {
+                // A category shared from another machine, seen here for the first time.
+                Category category = new()
+                {
+                    Name = snapshot.Name,
+                    Order = snapshot.Order,
+                    Shared = true,
+                    SyncId = snapshot.SyncId,
+                    ModifiedAtUtc = snapshot.ModifiedAtUtc
+                };
+                await _categoryRepository.SaveCategoryAsync(category);
+                Categories.Add(new CategoryViewModel(category, this, _firestoreSyncService));
+                return;
+            }
+
+            // Last-writer-wins: only apply if the incoming change is actually newer.
+            if (snapshot.ModifiedAtUtc <= existing.Category.ModifiedAtUtc)
+            {
+                return;
+            }
+
+            existing.Category.Name = snapshot.Name;
+            existing.Category.Order = snapshot.Order;
+            existing.Category.ModifiedAtUtc = snapshot.ModifiedAtUtc;
+            await _categoryRepository.UpdateCategoryAsync(existing.Category);
+        }
+
+        private async Task ApplyRemoteCategoryDeletedAsync(string categorySyncId)
+        {
+            CategoryViewModel existing = Categories.FirstOrDefault(c => c.Category.SyncId == categorySyncId);
+            if (existing == null)
+            {
+                // Already gone locally - an echo of our own delete, or a duplicate event. No-op.
+                return;
+            }
+
+            // Mirrors DeleteCategoryAsync's local effects, but skips the Firestore round trip -
+            // this delete already happened remotely.
+            foreach (SnippetViewModel snippetViewModel in existing.Snippets.ToList())
+            {
+                existing.Snippets.Remove(snippetViewModel);
+                SnippetViewModels.Remove(snippetViewModel);
+                snippetViewModel.Snippet.CategoryId = null;
+                UncategorizedSection.Snippets.Add(snippetViewModel);
+                await _repository.UpdateSnippetAsync(snippetViewModel.Snippet);
+            }
+
+            await _categoryRepository.DeleteCategoryAsync(existing.Category);
+            Categories.Remove(existing);
+        }
+
+        private async Task ApplyRemoteSnippetPutAsync(string categorySyncId, RemoteSnippetSnapshot snapshot)
+        {
+            CategoryViewModel category = Categories.FirstOrDefault(c => c.Category.SyncId == categorySyncId);
+            if (category == null)
+            {
+                // Self-heals: the owning category's own put always arrives (or already has), so
+                // a later reconnect/resend brings this snippet's category along with it.
+                return;
+            }
+
+            SnippetViewModel existing = category.Snippets.FirstOrDefault(s => s.Snippet.SyncId == snapshot.SyncId);
+
+            if (existing == null)
+            {
+                Snippet snippet = new()
+                {
+                    Type = snapshot.Type,
+                    Description = snapshot.Description,
+                    Content = snapshot.Content,
+                    ImageData = snapshot.ImageData,
+                    Order = snapshot.Order,
+                    Locked = snapshot.Locked,
+                    CategoryId = category.Category.Id,
+                    SyncId = snapshot.SyncId,
+                    ModifiedAtUtc = snapshot.ModifiedAtUtc
+                };
+                await _repository.SaveSnippetAsync(snippet);
+
+                State state = Matches(snippet, _clipboardMonitor.CurrentContent) ? State.Active : State.Inactive;
+                SnippetViewModel snippetViewModel = new(snippet, state, this);
+                SnippetViewModels.Add(snippetViewModel);
+                category.Snippets.Add(snippetViewModel);
+                return;
+            }
+
+            // Last-writer-wins: only apply if the incoming change is actually newer.
+            if (snapshot.ModifiedAtUtc <= existing.Snippet.ModifiedAtUtc)
+            {
+                return;
+            }
+
+            existing.Snippet.Description = snapshot.Description;
+            existing.Snippet.Content = snapshot.Content;
+            existing.Snippet.ImageData = snapshot.ImageData;
+            existing.Snippet.Order = snapshot.Order;
+            existing.Snippet.Locked = snapshot.Locked; // one-way latch (see Snippet.Locked) - a remote unlock can't happen, matching local behaviour.
+            existing.Snippet.ModifiedAtUtc = snapshot.ModifiedAtUtc;
+            await _repository.UpdateSnippetAsync(existing.Snippet);
+
+            existing.State = Matches(existing.Snippet, _clipboardMonitor.CurrentContent) ? State.Active : State.Inactive;
+        }
+
+        private async Task ApplyRemoteSnippetDeletedAsync(string categorySyncId, string snippetSyncId)
+        {
+            CategoryViewModel category = Categories.FirstOrDefault(c => c.Category.SyncId == categorySyncId);
+            SnippetViewModel existing = category?.Snippets.FirstOrDefault(s => s.Snippet.SyncId == snippetSyncId);
+            if (existing == null)
+            {
+                // Already gone locally - an echo of our own delete, or a duplicate event. No-op.
+                return;
+            }
+
+            await _repository.DeleteSnippetAsync(existing.Snippet);
+            SnippetViewModels.Remove(existing);
+            category.Snippets.Remove(existing);
+        }
+
+        #endregion
 
         private void OnPropertyChanged(string propertyName)
         {

@@ -83,13 +83,24 @@ is small enough not to need one):
   `SharpClipboardMonitor` (wraps the third-party SharpClipboard so the rest
   of the app depends on our own interface, and our own `ClipboardContent`
   type, instead), `ImageCodec` (the one place that knows snippet images are
-  PNG-encoded), `Logger` (best-effort file logging).
-- **ViewModel** (`ViewModel/`) — `WizardViewModel` owns the snippet
-  collection and implements `ISnippetHost`, the interface each
-  `SnippetViewModel` uses to ask its owner to persist, remove, or reorder it.
-  This replaced an earlier design based on static events on `App`; prefer
-  explicit interfaces like this over static/global event buses when adding
-  new cross-cutting behaviour.
+  PNG-encoded), `Logger` (best-effort file logging), `ISettingsService`/
+  `SettingsService` (Firestore credentials, DPAPI-encrypted at rest).
+  `Service/Firestore/` holds the category-sharing sync engine:
+  `IFirestoreSyncService`/`FirestoreSyncService` wraps the official
+  `Google.Cloud.Firestore` SDK (credential setup, two realtime `Listen()`
+  queries regardless of how many categories are shared, push/delete,
+  image chunking via `ImageChunker`, echo suppression via a per-instance
+  `LastWriterId`); `IFirestoreSyncEventSink` is the callback interface
+  `WizardViewModel` implements for remote-originated changes, mirroring
+  `ICategoryHost`/`ISnippetHost`'s pattern below.
+- **ViewModel** (`ViewModel/`) — `WizardViewModel` owns the snippet and
+  category collections and implements `ISnippetHost`/`ICategoryHost` (the
+  interfaces `SnippetViewModel`/`CategoryViewModel` use to ask their owner
+  to persist, remove, or reorder them) and `IFirestoreSyncEventSink` (the
+  interface `FirestoreSyncService` uses to hand it remote-originated
+  changes). This replaced an earlier design based on static events on
+  `App`; prefer explicit interfaces like this over static/global event
+  buses when adding new cross-cutting behaviour.
 - **View** (`View/`) — WPF windows/controls, mostly declarative bindings.
   `WizardView` and `EditSnippetView` receive their view model via
   constructor injection rather than instantiating it from XAML.
@@ -116,6 +127,15 @@ unhandled exception in async void would otherwise crash the app silently.
   auto-recorded" is centralized in `WizardViewModel.Matches`/`IsSaveable`
   rather than duplicated per content type — extend those, don't add a
   parallel comparison path, if a third content type is ever added.
+- Every snippet/category mutation that should push to Firestore (when its
+  category is Shared) goes through `WizardViewModel`'s own
+  `SaveSnippetAsync`/`UpdateSnippetAsync`/`TryPushCategoryAsync`/etc.
+  wrapper methods, never `_repository`/`_categoryRepository` directly —
+  those wrappers are the *only* place an outbound push is triggered. Code
+  that applies a remote-originated change (`IFirestoreSyncEventSink`'s
+  `OnRemote*` methods) deliberately bypasses them and calls the raw
+  repository + collection mutation instead, so applying a remote change
+  can never loop back out as an outbound push.
 - `SnippetRepository` relies on sqlite-net-pcl adding missing columns via
   `ALTER TABLE` on `CreateTableAsync`, so adding a new `Snippet` property is
   schema-compatible with existing databases for free — no migration code

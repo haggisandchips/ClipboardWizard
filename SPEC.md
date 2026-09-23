@@ -88,6 +88,30 @@ category, and can't be deleted or reordered.
   onto another (anywhere in its bounds, not just the header), with the same
   drop-indicator and no-op-suppression behaviour as snippet tiles.
 
+**Sharing.** A category can be marked **Shared** (a checkbox in the
+New/Edit Category dialog) to sync its snippets - text and images - to a
+Firestore database, and pull down matching changes from any other machine
+sharing that same category, in near-realtime and without polling. Each
+user points the app at their own Firebase project:
+- **Settings** - opened via the cog icon in the title bar - holds a
+  GCP service-account key (pasted or loaded from its downloaded `.json`
+  file), encrypted at rest with Windows DPAPI. A Test Connection button
+  verifies it against Firestore before saving.
+- While a category is Shared but Firebase hasn't been set up or isn't
+  currently connected, its header shows a warning icon; clicking it opens
+  Settings.
+- Turning Shared back off just stops further sync for that category -
+  data already pushed to Firestore is left as-is. Deleting a Shared
+  category prompts separately for whether to also delete it from
+  Firestore, since that's a different, more permanent action than
+  un-sharing.
+- Conflicts between two machines' offline edits are resolved by last
+  writer wins, silently - there's no merge or conflict UI.
+- Images larger than Firestore's per-document limit are chunked
+  automatically; this and the general size of shared data are a real
+  scaling limit for categories with many/large images, not just a
+  theoretical one.
+
 **Locking.** A snippet can be permanently protected from deletion:
 1. Clicking the lock icon on an unprotected snippet locks it permanently.
    This cannot be undone — there is no unlock action, by design, for
@@ -111,7 +135,6 @@ all when running a non-installed (development) build.
 
 ## Non-goals (current version)
 
-- No sync across machines.
 - No search/filter over snippets.
 - No clipboard formats other than plain text and images (rich text, files,
   and anything else are ignored).

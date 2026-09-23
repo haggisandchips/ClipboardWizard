@@ -64,6 +64,32 @@ namespace ClipboardWizard.Tests.Service
             Assert.Empty(await _repository.LoadCategoriesAsync());
         }
 
+        [Fact]
+        public async Task SyncFields_RoundTrip()
+        {
+            DateTime modifiedAtUtc = new(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+            Category category = new() { Name = "shared", Order = 0, Shared = true, SyncId = "abc123", ModifiedAtUtc = modifiedAtUtc };
+
+            await _repository.SaveCategoryAsync(category);
+            Category loaded = Assert.Single(await _repository.LoadCategoriesAsync());
+
+            Assert.True(loaded.Shared);
+            Assert.Equal("abc123", loaded.SyncId);
+            Assert.Equal(modifiedAtUtc, loaded.ModifiedAtUtc);
+        }
+
+        [Fact]
+        public async Task Shared_DefaultsToFalse()
+        {
+            Category category = new() { Name = "not shared", Order = 0 };
+
+            await _repository.SaveCategoryAsync(category);
+            Category loaded = Assert.Single(await _repository.LoadCategoriesAsync());
+
+            Assert.False(loaded.Shared);
+            Assert.Null(loaded.SyncId);
+        }
+
         public void Dispose()
         {
             try

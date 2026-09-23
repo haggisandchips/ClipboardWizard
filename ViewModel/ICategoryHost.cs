@@ -9,9 +9,18 @@ namespace ClipboardWizard.ViewModel
     /// </summary>
     public interface ICategoryHost
     {
+        /// <summary>Local-only persistence for fields that never sync (e.g. IsExpanded) - never pushes to Firestore. Renames/Shared changes go through ApplyCategoryEditAsync instead.</summary>
         Task UpdateCategoryAsync(Category category);
 
-        Task DeleteCategoryAsync(CategoryViewModel categoryViewModel);
+        /// <summary>alsoDeleteFromFirebase is only meaningful when categoryViewModel.Category.Shared - see CategoryViewModel.DeleteCategoryAsync's second confirmation prompt.</summary>
+        Task DeleteCategoryAsync(CategoryViewModel categoryViewModel, bool alsoDeleteFromFirebase = false);
+
+        /// <summary>
+        /// Applies a rename and/or Shared toggle from the New/Edit Category dialog. A false-&gt;true
+        /// Shared transition bulk-pushes the category and every snippet currently in it; true-&gt;false
+        /// does nothing further (already-pushed Firestore data is left as-is, per SPEC).
+        /// </summary>
+        Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool newShared);
 
         /// <summary>
         /// Drag-and-drop reordering: moves categoryViewModel to sit immediately before or after
