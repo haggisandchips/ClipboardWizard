@@ -5,6 +5,37 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-09-23
+
+### Added
+
+- Category sharing: mark a category Shared (New/Edit Category dialog) to
+  sync its snippets - text and images - to a Firestore database and pull
+  down matching changes from any other machine sharing that same category,
+  in near-realtime and without polling. Configure a GCP service-account key
+  via Settings (cog icon in the title bar), with a Test Connection check
+  before saving. Images too large for a single Firestore document are
+  chunked automatically.
+- A Shared category's header shows a flame icon next to its name; while
+  Shared is on but Firebase isn't set up or connected, a warning icon
+  appears instead (or alongside), and clicking it opens Settings.
+
+### Changed
+
+- The category header's edit icon is now a wrench and sits to the left of
+  the other icons, with a small gap separating it from them.
+
+### Fixed
+
+- Deleting a Shared category's "also delete from Firebase" prompt now has a
+  Cancel option, so backing out there aborts the whole deletion instead of
+  always deleting the category regardless.
+- Copying a shared image snippet could silently do nothing after the app
+  restarted or Firestore reconnected, for images large enough to be synced
+  in chunks - a stale, redundant re-fetch of already-synced image data
+  could clobber it locally. Image data is now fetched from Firestore at
+  most once per snippet and never re-applied afterward.
+
 ## [1.3.0] - 2026-09-03
 
 ### Added
