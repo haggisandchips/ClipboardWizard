@@ -73,6 +73,13 @@ namespace ClipboardWizard.ViewModel
             Delete = new(this);
             Edit = new(this);
             Lock = new(this);
+
+            // Several tile bindings (e.g. the text label) bind to the whole Snippet object
+            // rather than a specific nested property, so they only refresh on OUR PropertyChanged
+            // for "Snippet" - mirrors CategoryViewModel's forwarding of Category's own
+            // PropertyChanged, needed for the same reason (a remote-originated edit mutates the
+            // Model in place rather than replacing it).
+            Snippet.PropertyChanged += (_, _) => OnPropertyChanged(nameof(Snippet));
         }
 
         internal Task DeleteSnippetAsync()
@@ -118,8 +125,6 @@ namespace ClipboardWizard.ViewModel
             // category change also has to move this snippet between ICategorySection.Snippets
             // collections (what the accordion actually displays) - not just update the id.
             await _host.AssignCategoryAsync(this, editSnippetViewModel.SelectedCategoryId);
-
-            OnPropertyChanged(nameof(Snippet));
         }
 
         /// <summary>Drag-and-drop reordering: moves this snippet immediately before/after <paramref name="target"/>.</summary>

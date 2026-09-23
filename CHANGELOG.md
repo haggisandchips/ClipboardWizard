@@ -5,6 +5,22 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-23
+
+### Fixed
+
+- A Shared category's snippets could stay missing until the app was
+  restarted after first connecting Firestore (e.g. right after pasting a
+  service-account key), since the category and snippet listeners are
+  independent and Firestore doesn't guarantee the category's own put
+  arrives first. A snippet whose category hasn't shown up yet is now
+  buffered and applied as soon as it does, instead of being dropped.
+- Editing a shared snippet's description on one machine didn't visibly
+  update its tile on another, even though the change was correctly synced
+  and persisted - only a restart (which reloads every tile from scratch)
+  made it show up. The tile now refreshes immediately on a remote edit,
+  the same as a local one.
+
 ## [1.4.0] - 2026-09-23
 
 ### Added

@@ -22,6 +22,15 @@ namespace ClipboardWizard.ViewModel
         private readonly ISettingsService _settingsService;
         private readonly IFirestoreSyncService _firestoreSyncService;
 
+        /// <summary>
+        /// Remote snippet puts whose owning category hasn't arrived yet, keyed by categorySyncId.
+        /// The category and snippet listeners are two independent Firestore listeners, so on a
+        /// fresh connect there's no guarantee the category's own put is applied before its
+        /// snippets' puts are - replayed once that category is actually added (see
+        /// ApplyRemoteCategoryPutAsync), instead of being dropped until the next full reconnect.
+        /// </summary>
+        private readonly Dictionary<string, List<RemoteSnippetSnapshot>> _pendingSnippetsByCategorySyncId = new();
+
         /// <summary>Every snippet, regardless of category - used for clipboard-match scanning, which doesn't care about categories.</summary>
         public ObservableCollection<SnippetViewModel> SnippetViewModels { get; } = new();
 
@@ -742,6 +751,14 @@ namespace ClipboardWizard.ViewModel
                 };
                 await _categoryRepository.SaveCategoryAsync(category);
                 Categories.Add(new CategoryViewModel(category, this, _firestoreSyncService));
+
+                if (_pendingSnippetsByCategorySyncId.Remove(snapshot.SyncId, out List<RemoteSnippetSnapshot> pending))
+                {
+                    foreach (RemoteSnippetSnapshot pendingSnapshot in pending)
+                    {
+                        await ApplyRemoteSnippetPutAsync(snapshot.SyncId, pendingSnapshot);
+                    }
+                }
                 return;
             }
 
@@ -786,8 +803,12 @@ namespace ClipboardWizard.ViewModel
             CategoryViewModel category = Categories.FirstOrDefault(c => c.Category.SyncId == categorySyncId);
             if (category == null)
             {
-                // Self-heals: the owning category's own put always arrives (or already has), so
-                // a later reconnect/resend brings this snippet's category along with it.
+                if (!_pendingSnippetsByCategorySyncId.TryGetValue(categorySyncId, out List<RemoteSnippetSnapshot> pending))
+                {
+                    pending = new List<RemoteSnippetSnapshot>();
+                    _pendingSnippetsByCategorySyncId[categorySyncId] = pending;
+                }
+                pending.Add(snapshot);
                 return;
             }
 
