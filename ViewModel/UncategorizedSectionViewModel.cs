@@ -33,6 +33,8 @@ namespace ClipboardWizard.ViewModel
 
         public bool NeedsFirebaseSetup => false;
 
+        public bool IsShared => false;
+
         public ObservableCollection<SnippetViewModel> Snippets { get; } = new();
 
         public ICommand Delete => null;

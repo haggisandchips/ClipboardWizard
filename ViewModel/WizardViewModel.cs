@@ -795,12 +795,18 @@ namespace ClipboardWizard.ViewModel
 
             if (existing == null)
             {
+                // Genuinely new to us: for a chunked image, this is the one case that actually
+                // needs the chunk read - see RemoteSnippetSnapshot.
+                byte[] imageData = snapshot.FetchChunkedImageDataAsync != null
+                    ? await snapshot.FetchChunkedImageDataAsync()
+                    : snapshot.ImageData;
+
                 Snippet snippet = new()
                 {
                     Type = snapshot.Type,
                     Description = snapshot.Description,
                     Content = snapshot.Content,
-                    ImageData = snapshot.ImageData,
+                    ImageData = imageData,
                     Order = snapshot.Order,
                     Locked = snapshot.Locked,
                     CategoryId = category.Category.Id,
@@ -824,7 +830,14 @@ namespace ClipboardWizard.ViewModel
 
             existing.Snippet.Description = snapshot.Description;
             existing.Snippet.Content = snapshot.Content;
-            existing.Snippet.ImageData = snapshot.ImageData;
+            // Image pixels are immutable once created (SPEC: replacing one means delete+recreate
+            // with a new SyncId) - never re-fetched or reapplied for a SyncId we already have, so
+            // an echo of our own historical push (e.g. after a restart, when LastWriterId no
+            // longer matches) can't ever clobber it with a stale/incomplete network read.
+            if (existing.Snippet.Type != SnippetType.Image)
+            {
+                existing.Snippet.ImageData = snapshot.ImageData;
+            }
             existing.Snippet.Order = snapshot.Order;
             existing.Snippet.Locked = snapshot.Locked; // one-way latch (see Snippet.Locked) - a remote unlock can't happen, matching local behaviour.
             existing.Snippet.ModifiedAtUtc = snapshot.ModifiedAtUtc;

@@ -31,6 +31,9 @@ namespace ClipboardWizard.ViewModel
         /// <summary>Drives the category header's "Firebase setup required" warning icon - true only when this category opted into sharing but the app isn't actually connected.</summary>
         public bool NeedsFirebaseSetup => Category.Shared && _firestoreStatus.State != FirestoreConnectionState.Connected;
 
+        /// <summary>Drives the header's flame icon.</summary>
+        public bool IsShared => Category.Shared;
+
         public ObservableCollection<SnippetViewModel> Snippets { get; } = new();
 
         public DeleteCategoryCommand Delete { get; }
@@ -74,6 +77,7 @@ namespace ClipboardWizard.ViewModel
                 if (e.PropertyName == nameof(Category.Shared))
                 {
                     OnPropertyChanged(nameof(NeedsFirebaseSetup));
+                    OnPropertyChanged(nameof(IsShared));
                 }
             };
 
@@ -85,7 +89,10 @@ namespace ClipboardWizard.ViewModel
         /// explicit lock step, see SnippetViewModel), a category has no such per-item opt-in, so
         /// every delete confirms here instead. A Shared category gets a second prompt asking
         /// whether to also remove it from Firebase - distinct from un-sharing (the Shared
-        /// checkbox), which never touches already-pushed Firebase data.
+        /// checkbox), which never touches already-pushed Firebase data. That second prompt is
+        /// YesNoCancel rather than YesNo: Cancel aborts the whole deletion (category included),
+        /// since by this point the user may have realised they don't want to delete the category
+        /// at all, not just be choosing whether Firebase is included.
         /// </summary>
         internal async Task DeleteCategoryAsync()
         {
@@ -104,10 +111,15 @@ namespace ClipboardWizard.ViewModel
             if (Category.Shared)
             {
                 MessageBoxResult firebaseResult = MessageBox.Show(
-                    "This category is Shared. Also delete it from Firebase, for every device? Choosing No leaves the cloud copy in place.",
+                    "This category is Shared. Also delete it from Firebase, for every device? Choosing No leaves the cloud copy in place. Choosing Cancel leaves the category itself in place too.",
                     "Clipboard Wizard",
-                    MessageBoxButton.YesNo,
+                    MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Warning);
+
+                if (firebaseResult == MessageBoxResult.Cancel)
+                {
+                    return;
+                }
 
                 alsoDeleteFromFirebase = firebaseResult == MessageBoxResult.Yes;
             }

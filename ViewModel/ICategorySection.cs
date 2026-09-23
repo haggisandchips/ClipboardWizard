@@ -21,6 +21,9 @@ namespace ClipboardWizard.ViewModel
         /// <summary>Always false for the pinned Uncategorized section - it has no Shared flag to warn about.</summary>
         bool NeedsFirebaseSetup { get; }
 
+        /// <summary>Drives the header's flame icon. Always false for the pinned Uncategorized section - it has no Shared flag.</summary>
+        bool IsShared { get; }
+
         ObservableCollection<SnippetViewModel> Snippets { get; }
 
         /// <summary>Null when IsPinned, since Uncategorized can't be deleted.</summary>

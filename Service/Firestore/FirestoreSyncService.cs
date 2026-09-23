@@ -370,11 +370,20 @@ namespace ClipboardWizard.Service.Firestore
                     }
 
                     byte[] imageData = null;
+                    Func<Task<byte[]>> fetchChunkedImageData = null;
                     if (type == SnippetType.Image)
                     {
-                        imageData = document.ImageChunkCount > 1
-                            ? await FetchAndReassembleChunksAsync(snippetRef, cancellationToken)
-                            : (document.ImageDataBase64 != null ? Convert.FromBase64String(document.ImageDataBase64) : null);
+                        if (document.ImageChunkCount > 1)
+                        {
+                            // Deferred: this snippet's pixels can't have changed since we last saw
+                            // this SyncId (see RemoteSnippetSnapshot), so the sink only invokes this -
+                            // and only then pays for the chunk read - when the snippet is new to it.
+                            fetchChunkedImageData = () => FetchAndReassembleChunksAsync(snippetRef, cancellationToken);
+                        }
+                        else
+                        {
+                            imageData = document.ImageDataBase64 != null ? Convert.FromBase64String(document.ImageDataBase64) : null;
+                        }
                     }
 
                     await _sink.OnRemoteSnippetPutAsync(categorySyncId, new RemoteSnippetSnapshot
@@ -384,6 +393,7 @@ namespace ClipboardWizard.Service.Firestore
                         Description = document.Description,
                         Content = document.Content,
                         ImageData = imageData,
+                        FetchChunkedImageDataAsync = fetchChunkedImageData,
                         Order = document.Order,
                         Locked = document.Locked,
                         ModifiedAtUtc = document.ModifiedAtUtc.ToDateTime()
