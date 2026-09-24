@@ -98,7 +98,7 @@ namespace ClipboardWizard.ViewModel
         internal async Task DeleteCategoryAsync()
         {
             string message = Category.Shared
-                ? $"Delete category \"{Category.Name}\"? It's Shared, so this also deletes it from Firebase for every device sharing it."
+                ? $"Delete category \"{Category.Name}\"? It's Shared, so this also deletes it remotely for every device sharing it."
                 : $"Delete category \"{Category.Name}\"? This permanently deletes it from the database. Its snippets will become uncategorized, not deleted.";
 
             MessageBoxResult result = MessageBox.Show(
