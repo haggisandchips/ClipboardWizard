@@ -5,6 +5,29 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-09-24
+
+### Changed
+
+- A category's Shared setting can now only be chosen when it's created -
+  the Edit Category dialog only renames it, Shared can no longer be turned
+  on or off afterward.
+- Deleting a Shared category is now all-or-nothing: the same confirmation
+  removes it from Firestore too, and its snippets are deleted outright
+  rather than becoming uncategorized - matching what every other device
+  sharing it already did on the same delete. A second confirmation spells
+  out how many snippets are about to be permanently lost before it happens.
+- The category header's wrench (rename) icon now sits next to the trash
+  icon, instead of at the opposite end of the header.
+
+### Fixed
+
+- Editing a snippet's content could leave a stale tile showing as the
+  current clipboard match after saving, if the clipboard had changed while
+  the edit dialog was open - the edit only rechecked the snippet being
+  edited, not the rest. Every snippet's match state is now rechecked
+  after an edit, the same as after any other clipboard change.
+
 ## [1.4.1] - 2026-09-23
 
 ### Fixed
