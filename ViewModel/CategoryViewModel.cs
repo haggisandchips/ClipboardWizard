@@ -87,16 +87,18 @@ namespace ClipboardWizard.ViewModel
         /// <summary>
         /// Deleting a category isn't a single click: unlike a snippet (which is protected by an
         /// explicit lock step, see SnippetViewModel), a category has no such per-item opt-in, so
-        /// every delete confirms here instead. All-or-nothing: a single Yes/No prompt covers the
-        /// whole delete, including the Firestore copy for a Shared category - Shared can only be
-        /// set when a category is created (see AddCategoryViewModel) and never toggled off, so
-        /// there's no separate "un-share" action a second prompt would need to be distinguished
-        /// from.
+        /// every delete confirms here instead. All-or-nothing: deleting a Shared category also
+        /// deletes it from Firestore - Shared can only be set when a category is created (see
+        /// AddCategoryViewModel) and never toggled off, so there's no separate "un-share" action
+        /// this could be confused with. A Shared category's snippets are deleted outright too,
+        /// not uncategorized (see WizardViewModel.DeleteCategoryAsync) - that's what every other
+        /// device sharing it ends up doing on the same delete, so a second, stronger prompt
+        /// spells that out before it happens.
         /// </summary>
         internal async Task DeleteCategoryAsync()
         {
             string message = Category.Shared
-                ? $"Delete category \"{Category.Name}\"? This permanently deletes it from the database, including Firebase for every device sharing it. Its snippets will become uncategorized, not deleted."
+                ? $"Delete category \"{Category.Name}\"? It's Shared, so this also deletes it from Firebase for every device sharing it."
                 : $"Delete category \"{Category.Name}\"? This permanently deletes it from the database. Its snippets will become uncategorized, not deleted.";
 
             MessageBoxResult result = MessageBox.Show(
@@ -108,6 +110,20 @@ namespace ClipboardWizard.ViewModel
             if (result != MessageBoxResult.Yes)
             {
                 return;
+            }
+
+            if (Category.Shared && Snippets.Count > 0)
+            {
+                MessageBoxResult snippetsResult = MessageBox.Show(
+                    $"This also permanently deletes all {Snippets.Count} snippet(s) in \"{Category.Name}\" - on every device sharing it, not just here. This cannot be undone. Are you REALLY sure?",
+                    "Clipboard Wizard",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (snippetsResult != MessageBoxResult.Yes)
+                {
+                    return;
+                }
             }
 
             await _host.DeleteCategoryAsync(this);

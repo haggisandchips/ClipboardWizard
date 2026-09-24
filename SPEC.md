@@ -75,10 +75,14 @@ category, and can't be deleted or reordered.
 - **Edit** — click the pencil icon on a category's header to rename it.
   Shared can't be changed here - see Sharing.
 - **Delete** — click the trash icon on a category's header. This isn't a
-  single click: a confirmation prompt must be accepted first. Deleting a
-  category never deletes its snippets - they move to Uncategorized instead.
-  It's all-or-nothing for the category itself, though: for a Shared
-  category, the same confirmation deletes it from Firestore too.
+  single click: a confirmation prompt must be accepted first. For a
+  non-Shared category, its snippets move to Uncategorized rather than being
+  deleted with it. A Shared category is all-or-nothing instead: the same
+  delete also removes it from Firestore, and its snippets are deleted
+  outright too, not uncategorized - matching what every other device
+  sharing that category ends up doing on the same delete. That second,
+  larger consequence gets its own, separate confirmation - spelling out how
+  many snippets are about to be permanently lost - on top of the first.
 - **Expand/collapse** — click a section's header (anywhere except the trash
   icon). Real categories persist this immediately; Uncategorized's state is
   saved with the window's other leftover placement on close.
@@ -106,9 +110,9 @@ at their own Firebase project:
 - While a category is Shared but Firebase hasn't been set up or isn't
   currently connected, its header shows a warning icon; clicking it opens
   Settings.
-- Deleting a Shared category always deletes its Firestore copy too, in the
-  same confirmation as the local delete (see Delete, above) - there's no
-  way to delete it locally while leaving the cloud copy in place.
+- Deleting a Shared category always deletes its Firestore copy, and its
+  snippets, too (see Delete, above) - there's no way to delete it locally
+  while leaving the cloud copy, or its snippets, in place.
 - Conflicts between two machines' offline edits are resolved by last
   writer wins, silently - there's no merge or conflict UI.
 - Images larger than Firestore's per-document limit are chunked

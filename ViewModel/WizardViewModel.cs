@@ -194,24 +194,44 @@ namespace ClipboardWizard.ViewModel
 
         public async Task DeleteCategoryAsync(CategoryViewModel categoryViewModel)
         {
-            // The category's snippets survive as uncategorized, not deleted with it.
-            List<Task> updates = new();
-            foreach (SnippetViewModel snippetViewModel in categoryViewModel.Snippets.ToList())
-            {
-                categoryViewModel.Snippets.Remove(snippetViewModel);
-                snippetViewModel.Snippet.CategoryId = null;
-                UncategorizedSection.Snippets.Add(snippetViewModel);
-                updates.Add(UpdateSnippetAsync(snippetViewModel.Snippet));
-            }
-            updates.AddRange(RenumberSection(UncategorizedSection));
-            await Task.WhenAll(updates);
+            Category category = categoryViewModel.Category;
 
-            await _categoryRepository.DeleteCategoryAsync(categoryViewModel.Category);
+            if (category.Shared)
+            {
+                // A Shared category's snippets don't survive it: deleting it from Firestore
+                // cascades to every snippet doc under it too (DeleteRemoteCategoryAsync), and
+                // every other device sharing this category ends up deleting its local copies of
+                // them via that per-snippet delete event (see ApplyRemoteSnippetDeletedAsync) -
+                // so they're deleted here outright as well, instead of uncategorized, to keep
+                // this device consistent with all the others.
+                foreach (SnippetViewModel snippetViewModel in categoryViewModel.Snippets.ToList())
+                {
+                    categoryViewModel.Snippets.Remove(snippetViewModel);
+                    SnippetViewModels.Remove(snippetViewModel);
+                    await _repository.DeleteSnippetAsync(snippetViewModel.Snippet);
+                }
+            }
+            else
+            {
+                // The category's snippets survive as uncategorized, not deleted with it.
+                List<Task> updates = new();
+                foreach (SnippetViewModel snippetViewModel in categoryViewModel.Snippets.ToList())
+                {
+                    categoryViewModel.Snippets.Remove(snippetViewModel);
+                    snippetViewModel.Snippet.CategoryId = null;
+                    UncategorizedSection.Snippets.Add(snippetViewModel);
+                    updates.Add(UpdateSnippetAsync(snippetViewModel.Snippet));
+                }
+                updates.AddRange(RenumberSection(UncategorizedSection));
+                await Task.WhenAll(updates);
+            }
+
+            await _categoryRepository.DeleteCategoryAsync(category);
             Categories.Remove(categoryViewModel);
 
-            if (categoryViewModel.Category.Shared && categoryViewModel.Category.SyncId != null)
+            if (category.Shared && category.SyncId != null)
             {
-                await TryDeleteRemoteCategoryAsync(categoryViewModel.Category.SyncId);
+                await TryDeleteRemoteCategoryAsync(category.SyncId);
             }
         }
 
@@ -776,15 +796,18 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            // Mirrors DeleteCategoryAsync's local effects, but skips the Firestore round trip -
-            // this delete already happened remotely.
+            // Mirrors DeleteCategoryAsync's local effects for a Shared category (this event only
+            // ever fires for one), but skips the Firestore round trip - this delete already
+            // happened remotely. In practice each snippet is usually already gone by the time
+            // this runs, since deleting a Shared category deletes every snippet doc under it
+            // too, and this device's own snippet-delete listener (ApplyRemoteSnippetDeletedAsync)
+            // typically beats this category-delete event here - this loop is the safety net for
+            // any that arrive out of order.
             foreach (SnippetViewModel snippetViewModel in existing.Snippets.ToList())
             {
                 existing.Snippets.Remove(snippetViewModel);
                 SnippetViewModels.Remove(snippetViewModel);
-                snippetViewModel.Snippet.CategoryId = null;
-                UncategorizedSection.Snippets.Add(snippetViewModel);
-                await _repository.UpdateSnippetAsync(snippetViewModel.Snippet);
+                await _repository.DeleteSnippetAsync(snippetViewModel.Snippet);
             }
 
             await _categoryRepository.DeleteCategoryAsync(existing.Category);

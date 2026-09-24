@@ -13,10 +13,12 @@ namespace ClipboardWizard.ViewModel
         Task UpdateCategoryAsync(Category category);
 
         /// <summary>
-        /// All-or-nothing: also deletes the category from Firestore when
-        /// categoryViewModel.Category.Shared, since Shared can only be set at creation (see
-        /// AddCategoryViewModel) and never toggled off, so there's no lesser "un-share" action
-        /// this could be confused with - see CategoryViewModel.DeleteCategoryAsync's prompt.
+        /// All-or-nothing: when categoryViewModel.Category.Shared, this also deletes the
+        /// category from Firestore, and deletes its snippets outright rather than uncategorizing
+        /// them - matching what every other device sharing the category ends up doing on the
+        /// same delete. Shared can only be set at creation (see AddCategoryViewModel) and never
+        /// toggled off, so there's no lesser "un-share" action this could be confused with - see
+        /// CategoryViewModel.DeleteCategoryAsync's prompts.
         /// </summary>
         Task DeleteCategoryAsync(CategoryViewModel categoryViewModel);
 

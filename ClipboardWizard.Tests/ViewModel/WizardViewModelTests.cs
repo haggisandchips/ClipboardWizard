@@ -844,6 +844,38 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
+        public async Task DeleteCategoryAsync_Shared_DeletesItsSnippetsInsteadOfUncategorizing()
+        {
+            var (viewModel, repository, categoryRepository, _, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+
+            await viewModel.DeleteCategoryAsync(category);
+
+            Assert.Empty(viewModel.SnippetViewModels);
+            Assert.Empty(viewModel.UncategorizedSection.Snippets);
+            Assert.Empty(repository.Snippets);
+        }
+
+        [Fact]
+        public async Task OnRemoteCategoryDeletedAsync_WithRemainingSnippets_DeletesThemInsteadOfUncategorizing()
+        {
+            var (viewModel, repository, categoryRepository, _, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1, SyncId = "snip-1" });
+            await viewModel.LoadAsync();
+
+            await ((IFirestoreSyncEventSink)viewModel).OnRemoteCategoryDeletedAsync("cat-1");
+
+            Assert.Empty(viewModel.Categories);
+            Assert.Empty(viewModel.SnippetViewModels);
+            Assert.Empty(viewModel.UncategorizedSection.Snippets);
+            Assert.Empty(repository.Snippets);
+        }
+
+        [Fact]
         public async Task OnRemoteCategoryPutAsync_UnknownSyncId_CreatesNewLocalCategory()
         {
             var (viewModel, _, categoryRepository, _, _) = CreateSutWithCategories();
