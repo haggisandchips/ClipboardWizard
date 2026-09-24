@@ -5,9 +5,14 @@ namespace ClipboardWizard.Tests.Fakes
 {
     internal class FakeSnippetHost : ISnippetHost
     {
-        public string ClipboardText { get; set; } = string.Empty;
-
         public IReadOnlyList<Category> Categories { get; set; } = new List<Category>();
+
+        public int RefreshSnippetStatesCallCount { get; private set; }
+
+        public void RefreshSnippetStates()
+        {
+            RefreshSnippetStatesCallCount++;
+        }
 
         public List<Snippet> UpdatedSnippets { get; } = new();
 

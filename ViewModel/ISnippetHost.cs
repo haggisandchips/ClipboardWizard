@@ -12,10 +12,17 @@ namespace ClipboardWizard.ViewModel
     /// </summary>
     public interface ISnippetHost
     {
-        string ClipboardText { get; }
-
         /// <summary>Available categories, for the edit dialog's assignment dropdown.</summary>
         IReadOnlyList<Category> Categories { get; }
+
+        /// <summary>
+        /// Re-checks every snippet's Active/Inactive state against the current clipboard
+        /// contents. Editing a snippet's content can change which snippet (if any) is the one
+        /// matching the clipboard, so this sweeps the whole collection through the same
+        /// matching logic every other clipboard-driven state change uses, rather than just
+        /// setting the edited snippet's own State in isolation.
+        /// </summary>
+        void RefreshSnippetStates();
 
         Task UpdateSnippetAsync(Snippet snippet);
 

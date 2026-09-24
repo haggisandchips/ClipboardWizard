@@ -116,10 +116,14 @@ namespace ClipboardWizard.ViewModel
             if (Snippet.Type == SnippetType.Text)
             {
                 Snippet.Content = editSnippetViewModel.Content;
-                State = string.Equals(Snippet.Content, _host.ClipboardText, StringComparison.Ordinal) ? State.Active : State.Inactive;
             }
 
             await _host.UpdateSnippetAsync(Snippet);
+
+            // The edit may have changed whether THIS snippet matches the clipboard, and (if the
+            // clipboard changed while the modal edit dialog was open) may equally have left some
+            // OTHER snippet's Active flag stale - so recompute for everyone, not just this one.
+            _host.RefreshSnippetStates();
 
             // Goes through the host rather than setting Snippet.CategoryId directly, since a
             // category change also has to move this snippet between ICategorySection.Snippets

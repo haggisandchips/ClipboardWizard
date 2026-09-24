@@ -60,9 +60,6 @@ namespace ClipboardWizard.ViewModel
 
         public OpenSettingsCommand OpenSettings { get; }
 
-        /// <summary>Text content of the clipboard, for the (text-only) edit dialog's Active check.</summary>
-        public string ClipboardText => _clipboardMonitor.CurrentContent is { Type: ClipboardContentType.Text } content ? content.Text ?? string.Empty : string.Empty;
-
         public bool HasSaveableClipboardContent => IsSaveable(_clipboardMonitor.CurrentContent);
 
         public event PropertyChangedEventHandler PropertyChanged;
@@ -351,6 +348,30 @@ namespace ClipboardWizard.ViewModel
 
         private void ClipboardMonitor_ContentCopied(object sender, ClipboardContent content)
         {
+            bool matched = RefreshSnippetStates(content);
+
+            if (!matched && Recording && IsSaveable(content))
+            {
+                // Fire-and-forget: this runs off the back of an automatic clipboard event with
+                // no user-facing command to report failure through, so it logs instead of
+                // throwing back into the clipboard monitor's event.
+                _ = TryAutoSaveAsync(content);
+            }
+        }
+
+        /// <summary>
+        /// Re-checks every snippet against the live clipboard. An edit can change whether the
+        /// edited snippet - or another snippet that used to be the sole match - is the current
+        /// Active one, so this always sweeps the whole collection rather than just the snippet
+        /// that changed (see ISnippetHost.RefreshSnippetStates).
+        /// </summary>
+        public void RefreshSnippetStates()
+        {
+            RefreshSnippetStates(_clipboardMonitor.CurrentContent);
+        }
+
+        private bool RefreshSnippetStates(ClipboardContent content)
+        {
             bool matched = false;
 
             foreach (SnippetViewModel snippetViewModel in SnippetViewModels)
@@ -361,13 +382,7 @@ namespace ClipboardWizard.ViewModel
                 matched |= equal;
             }
 
-            if (!matched && Recording && IsSaveable(content))
-            {
-                // Fire-and-forget: this runs off the back of an automatic clipboard event with
-                // no user-facing command to report failure through, so it logs instead of
-                // throwing back into the clipboard monitor's event.
-                _ = TryAutoSaveAsync(content);
-            }
+            return matched;
         }
 
         private async Task TryAutoSaveAsync(ClipboardContent content)
