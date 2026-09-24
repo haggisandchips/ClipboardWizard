@@ -5,7 +5,7 @@ namespace ClipboardWizard.Tests.Fakes
 {
     internal class FakeCategoryHost : ICategoryHost
     {
-        public List<(CategoryViewModel Category, bool AlsoDeleteFromFirebase)> DeletedCategories { get; } = new();
+        public List<CategoryViewModel> DeletedCategories { get; } = new();
 
         public List<Category> UpdatedCategories { get; } = new();
 
@@ -29,7 +29,7 @@ namespace ClipboardWizard.Tests.Fakes
             return Task.CompletedTask;
         }
 
-        public List<(CategoryViewModel Category, string NewName, bool NewShared)> Edits { get; } = new();
+        public List<(CategoryViewModel Category, string NewName)> Edits { get; } = new();
 
         public Task UpdateCategoryAsync(Category category)
         {
@@ -37,15 +37,15 @@ namespace ClipboardWizard.Tests.Fakes
             return Task.CompletedTask;
         }
 
-        public Task DeleteCategoryAsync(CategoryViewModel categoryViewModel, bool alsoDeleteFromFirebase)
+        public Task DeleteCategoryAsync(CategoryViewModel categoryViewModel)
         {
-            DeletedCategories.Add((categoryViewModel, alsoDeleteFromFirebase));
+            DeletedCategories.Add(categoryViewModel);
             return Task.CompletedTask;
         }
 
-        public Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool newShared)
+        public Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName)
         {
-            Edits.Add((categoryViewModel, newName, newShared));
+            Edits.Add((categoryViewModel, newName));
             return Task.CompletedTask;
         }
 

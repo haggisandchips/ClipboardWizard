@@ -87,17 +87,20 @@ namespace ClipboardWizard.ViewModel
         /// <summary>
         /// Deleting a category isn't a single click: unlike a snippet (which is protected by an
         /// explicit lock step, see SnippetViewModel), a category has no such per-item opt-in, so
-        /// every delete confirms here instead. A Shared category gets a second prompt asking
-        /// whether to also remove it from Firebase - distinct from un-sharing (the Shared
-        /// checkbox), which never touches already-pushed Firebase data. That second prompt is
-        /// YesNoCancel rather than YesNo: Cancel aborts the whole deletion (category included),
-        /// since by this point the user may have realised they don't want to delete the category
-        /// at all, not just be choosing whether Firebase is included.
+        /// every delete confirms here instead. All-or-nothing: a single Yes/No prompt covers the
+        /// whole delete, including the Firestore copy for a Shared category - Shared can only be
+        /// set when a category is created (see AddCategoryViewModel) and never toggled off, so
+        /// there's no separate "un-share" action a second prompt would need to be distinguished
+        /// from.
         /// </summary>
         internal async Task DeleteCategoryAsync()
         {
+            string message = Category.Shared
+                ? $"Delete category \"{Category.Name}\"? This permanently deletes it from the database, including Firebase for every device sharing it. Its snippets will become uncategorized, not deleted."
+                : $"Delete category \"{Category.Name}\"? This permanently deletes it from the database. Its snippets will become uncategorized, not deleted.";
+
             MessageBoxResult result = MessageBox.Show(
-                $"Delete category \"{Category.Name}\"? Its snippets will become uncategorized, not deleted.",
+                message,
                 "Clipboard Wizard",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -107,24 +110,7 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            bool alsoDeleteFromFirebase = false;
-            if (Category.Shared)
-            {
-                MessageBoxResult firebaseResult = MessageBox.Show(
-                    "This category is Shared. Also delete it from Firebase, for every device? Choosing No leaves the cloud copy in place. Choosing Cancel leaves the category itself in place too.",
-                    "Clipboard Wizard",
-                    MessageBoxButton.YesNoCancel,
-                    MessageBoxImage.Warning);
-
-                if (firebaseResult == MessageBoxResult.Cancel)
-                {
-                    return;
-                }
-
-                alsoDeleteFromFirebase = firebaseResult == MessageBoxResult.Yes;
-            }
-
-            await _host.DeleteCategoryAsync(this, alsoDeleteFromFirebase);
+            await _host.DeleteCategoryAsync(this);
         }
 
         internal async Task EditCategoryAsync()
@@ -144,7 +130,7 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            await _host.ApplyCategoryEditAsync(this, editViewModel.Name, editViewModel.Shared);
+            await _host.ApplyCategoryEditAsync(this, editViewModel.Name);
         }
 
         /// <summary>Drag-and-drop reordering: moves this category immediately before/after <paramref name="target"/>.</summary>

@@ -71,10 +71,14 @@ section containing that category's snippet tiles. The pinned
 **Uncategorized** section always comes last, holds any snippet with no
 category, and can't be deleted or reordered.
 - **Create** — the **New Category** button (see Manual add, above) opens
-  a dialog for just a name.
+  a dialog for a name and, optionally, Shared (see Sharing, below).
+- **Edit** — click the pencil icon on a category's header to rename it.
+  Shared can't be changed here - see Sharing.
 - **Delete** — click the trash icon on a category's header. This isn't a
   single click: a confirmation prompt must be accepted first. Deleting a
   category never deletes its snippets - they move to Uncategorized instead.
+  It's all-or-nothing for the category itself, though: for a Shared
+  category, the same confirmation deletes it from Firestore too.
 - **Expand/collapse** — click a section's header (anywhere except the trash
   icon). Real categories persist this immediately; Uncategorized's state is
   saved with the window's other leftover placement on close.
@@ -89,10 +93,12 @@ category, and can't be deleted or reordered.
   drop-indicator and no-op-suppression behaviour as snippet tiles.
 
 **Sharing.** A category can be marked **Shared** (a checkbox in the
-New/Edit Category dialog) to sync its snippets - text and images - to a
+New Category dialog, only) to sync its snippets - text and images - to a
 Firestore database, and pull down matching changes from any other machine
-sharing that same category, in near-realtime and without polling. Each
-user points the app at their own Firebase project:
+sharing that same category, in near-realtime and without polling. Shared
+can only be set when a category is created - it can't be turned on or off
+afterward, only the name can (see Edit, above). Each user points the app
+at their own Firebase project:
 - **Settings** - opened via the cog icon in the title bar - holds a
   GCP service-account key (pasted or loaded from its downloaded `.json`
   file), encrypted at rest with Windows DPAPI. A Test Connection button
@@ -100,11 +106,9 @@ user points the app at their own Firebase project:
 - While a category is Shared but Firebase hasn't been set up or isn't
   currently connected, its header shows a warning icon; clicking it opens
   Settings.
-- Turning Shared back off just stops further sync for that category -
-  data already pushed to Firestore is left as-is. Deleting a Shared
-  category prompts separately for whether to also delete it from
-  Firestore, since that's a different, more permanent action than
-  un-sharing.
+- Deleting a Shared category always deletes its Firestore copy too, in the
+  same confirmation as the local delete (see Delete, above) - there's no
+  way to delete it locally while leaving the cloud copy in place.
 - Conflicts between two machines' offline edits are resolved by last
   writer wins, silently - there's no merge or conflict UI.
 - Images larger than Firestore's per-document limit are chunked

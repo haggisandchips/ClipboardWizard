@@ -12,15 +12,21 @@ namespace ClipboardWizard.ViewModel
         /// <summary>Local-only persistence for fields that never sync (e.g. IsExpanded) - never pushes to Firestore. Renames/Shared changes go through ApplyCategoryEditAsync instead.</summary>
         Task UpdateCategoryAsync(Category category);
 
-        /// <summary>alsoDeleteFromFirebase is only meaningful when categoryViewModel.Category.Shared - see CategoryViewModel.DeleteCategoryAsync's second confirmation prompt.</summary>
-        Task DeleteCategoryAsync(CategoryViewModel categoryViewModel, bool alsoDeleteFromFirebase = false);
+        /// <summary>
+        /// All-or-nothing: also deletes the category from Firestore when
+        /// categoryViewModel.Category.Shared, since Shared can only be set at creation (see
+        /// AddCategoryViewModel) and never toggled off, so there's no lesser "un-share" action
+        /// this could be confused with - see CategoryViewModel.DeleteCategoryAsync's prompt.
+        /// </summary>
+        Task DeleteCategoryAsync(CategoryViewModel categoryViewModel);
 
         /// <summary>
-        /// Applies a rename and/or Shared toggle from the New/Edit Category dialog. A false-&gt;true
-        /// Shared transition bulk-pushes the category and every snippet currently in it; true-&gt;false
-        /// does nothing further (already-pushed Firestore data is left as-is, per SPEC).
+        /// Applies a rename from the Edit Category dialog. Shared can only be set when a
+        /// category is created (see WizardViewModel.AddCategoryAsync) and never changes
+        /// afterward, so this only ever renames - pushing the updated name too, if the category
+        /// is already Shared.
         /// </summary>
-        Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool newShared);
+        Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName);
 
         /// <summary>
         /// Drag-and-drop reordering: moves categoryViewModel to sit immediately before or after

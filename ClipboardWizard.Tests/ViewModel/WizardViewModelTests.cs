@@ -730,49 +730,30 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
-        public async Task ApplyCategoryEditAsync_EnablingSharing_BulkPushesCategoryAndItsSnippets()
-        {
-            var (viewModel, repository, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
-            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
-            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
-            await viewModel.LoadAsync();
-            CategoryViewModel category = Assert.Single(viewModel.Categories);
-
-            await viewModel.ApplyCategoryEditAsync(category, "Work", newShared: true);
-
-            Assert.True(category.Category.Shared);
-            Assert.NotNull(category.Category.SyncId);
-            var bulkPush = Assert.Single(firestoreSyncService.BulkPushes);
-            Assert.Single(bulkPush.Snippets);
-            Assert.NotNull(bulkPush.Snippets[0].SyncId);
-        }
-
-        [Fact]
-        public async Task ApplyCategoryEditAsync_RenameWhileAlreadyShared_PushesCategoryOnlyNotBulk()
+        public async Task ApplyCategoryEditAsync_Shared_PushesRenamedCategory()
         {
             var (viewModel, _, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
             categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.ApplyCategoryEditAsync(category, "Renamed", newShared: true);
+            await viewModel.ApplyCategoryEditAsync(category, "Renamed");
 
             Assert.Equal("Renamed", category.Category.Name);
-            Assert.Empty(firestoreSyncService.BulkPushes);
             Assert.Single(firestoreSyncService.PushedCategories);
         }
 
         [Fact]
-        public async Task ApplyCategoryEditAsync_DisablingSharing_PushesNothingFurther()
+        public async Task ApplyCategoryEditAsync_NotShared_NeverPushes()
         {
             var (viewModel, _, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
-            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.ApplyCategoryEditAsync(category, "Work", newShared: false);
+            await viewModel.ApplyCategoryEditAsync(category, "Renamed");
 
-            Assert.False(category.Category.Shared);
+            Assert.Equal("Renamed", category.Category.Name);
             Assert.Empty(firestoreSyncService.BulkPushes);
             Assert.Empty(firestoreSyncService.PushedCategories);
         }
@@ -837,27 +818,27 @@ namespace ClipboardWizard.Tests.ViewModel
         }
 
         [Fact]
-        public async Task DeleteCategoryAsync_WithAlsoDeleteFromFirebase_DeletesRemoteCategory()
+        public async Task DeleteCategoryAsync_Shared_DeletesRemoteCategoryToo()
         {
             var (viewModel, _, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
             categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.DeleteCategoryAsync(category, alsoDeleteFromFirebase: true);
+            await viewModel.DeleteCategoryAsync(category);
 
             Assert.Equal("cat-1", Assert.Single(firestoreSyncService.DeletedRemoteCategories));
         }
 
         [Fact]
-        public async Task DeleteCategoryAsync_WithoutAlsoDeleteFromFirebase_LeavesRemoteDataAlone()
+        public async Task DeleteCategoryAsync_NotShared_NeverCallsRemoteDelete()
         {
             var (viewModel, _, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
-            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.DeleteCategoryAsync(category, alsoDeleteFromFirebase: false);
+            await viewModel.DeleteCategoryAsync(category);
 
             Assert.Empty(firestoreSyncService.DeletedRemoteCategories);
         }

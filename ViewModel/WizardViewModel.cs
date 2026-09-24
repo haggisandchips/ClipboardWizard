@@ -173,48 +173,26 @@ namespace ClipboardWizard.ViewModel
             return _categoryRepository.UpdateCategoryAsync(category);
         }
 
-        public async Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool newShared)
+        public async Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName)
         {
             Category category = categoryViewModel.Category;
-            bool justEnabledSharing = newShared && !category.Shared;
-
             category.Name = newName?.Trim();
-            category.Shared = newShared;
 
-            if (justEnabledSharing)
-            {
-                category.SyncId ??= Guid.NewGuid().ToString("N");
-            }
-            if (newShared)
+            if (category.Shared)
             {
                 category.ModifiedAtUtc = DateTime.UtcNow;
             }
 
             await _categoryRepository.UpdateCategoryAsync(category);
 
-            if (justEnabledSharing)
+            if (category.Shared)
             {
-                // Initial bulk push: the category document, then every snippet currently in it.
-                List<Snippet> snippets = categoryViewModel.Snippets.Select(s => s.Snippet).ToList();
-                foreach (Snippet snippet in snippets)
-                {
-                    snippet.SyncId ??= Guid.NewGuid().ToString("N");
-                    snippet.ModifiedAtUtc = DateTime.UtcNow;
-                    await _repository.UpdateSnippetAsync(snippet);
-                }
-
-                await TryPushCategoryBulkAsync(category, snippets);
-            }
-            else if (newShared)
-            {
-                // Still shared (e.g. just renamed) - push the updated category doc so the change propagates.
+                // Push the updated category doc so the rename propagates to other devices.
                 await TryPushCategoryAsync(category);
             }
-            // Shared true -> false: nothing further. The push wrappers already gate on
-            // category.Shared, so already-pushed Firestore data is simply left as-is (SPEC).
         }
 
-        public async Task DeleteCategoryAsync(CategoryViewModel categoryViewModel, bool alsoDeleteFromFirebase = false)
+        public async Task DeleteCategoryAsync(CategoryViewModel categoryViewModel)
         {
             // The category's snippets survive as uncategorized, not deleted with it.
             List<Task> updates = new();
@@ -231,7 +209,7 @@ namespace ClipboardWizard.ViewModel
             await _categoryRepository.DeleteCategoryAsync(categoryViewModel.Category);
             Categories.Remove(categoryViewModel);
 
-            if (alsoDeleteFromFirebase && categoryViewModel.Category.SyncId != null)
+            if (categoryViewModel.Category.Shared && categoryViewModel.Category.SyncId != null)
             {
                 await TryDeleteRemoteCategoryAsync(categoryViewModel.Category.SyncId);
             }
