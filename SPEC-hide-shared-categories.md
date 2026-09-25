@@ -1,84 +1,99 @@
-# SPEC draft: hide shared categories + Force Sync
+# SPEC draft: Hide Shared Categories
 
-Status: **draft, not implemented**. Requirements are still being worked out -
-this captures what's settled and, more importantly, what isn't, so it can be
-reviewed before any plan or code is written. Not yet folded into `SPEC.md`.
+Let a device connected to the remote database hide individual categories.
 
 ## Purpose
 
-Let a device hide individual Shared categories from its own main window
-(without affecting sync itself, or other devices), and give a way to force
-an immediate Firestore sync from the Settings dialog rather than waiting on
-the realtime listener.
+This is to allow a single remote database to contain categories relevant to
+both personal and work projects. Individual devices can then pick only the
+categories relevant to the device's purpose be displayed.
 
-## Settled
+## Implementation
 
-- **Per-category, not global.** Each Shared category can be hidden or shown
-  independently on a given device - not one all-or-nothing switch for every
-  Shared category at once.
-- **Hiding removes the category from the main window entirely** - not a
-  grayed-out or collapsed placeholder that still occupies visual space.
-- **Force Sync is still wanted**, but not wired through the Settings
-  dialog's Save/Cancel flow the way first proposed (see below) - that
-  caused problems and needs a different shape.
+**Configure button.** Change the Test Connection button to a "Configure ..."
+button. When the key has been changed (pasted, loaded, or edited) the Save
+button should remain disabled until Configure has been completed successfully.
+Reopening Settings without changing the key leaves Save enabled as now.
 
-## Open questions
+On clicking Configure access the remote database (as Test Connection did) and
+download the list of categories. If the connection fails show the error as
+Test Connection does now, open no dialogue, and leave Save disabled.
 
-### 1. What does "hidden" mean for local storage?
+Otherwise present a new dialogue to the user with this list of categories with
+a checkbox beside each (to the left). The list includes every Shared category
+in the remote database, including ones created on this device. Selecting none
+is acceptable, but at most 10 categories may be unchecked (a Firestore `not-in`
+limit, see below) - OK is disabled with an explanation beyond that. Dialogue
+should also have an OK button and does not need any others.
 
-- **A - UI-only filter.** The category and its snippets stay fully
-  persisted locally (SQLite); hiding just removes it from what's rendered.
-  Un-hiding is instant, no network needed.
-- **B - Locally dropped.** A hidden category (and its snippets) is removed
-  from the local database entirely. Un-hiding re-pulls it from Firestore.
-  Saves local storage but:
-  - What happens to any local edits/snippets not yet confirmed synced at
-    the moment it's hidden?
-  - Un-hiding requires Firestore to be reachable - what happens if it isn't?
+On clicking OK, if any category is unchecked, run the filtered queries (below)
+once to confirm the required index exists. If it doesn't, show the index
+creation link from Firestore's error in Settings and leave Save disabled.
+Otherwise close the dialogue and the list of categories should be remembered
+in event the user then clicks Save.
 
-### 2. Where does category order fit once hiding is per-category?
+If the user clicks Cancel then forget everything.
 
-- Idea: pin all Shared categories at the top of the list, ahead of every
-  local (non-Shared) category, so ordering only has to be solved within
-  each group separately rather than as one interleaved list.
-- Does Shared-category order need to sync via Firestore too (so every
-  device sees the same order), or can it stay purely local per device?
-  - Syncing it means a new last-writer-wins-style conflict surface for
-    order, the same shape as the existing per-category `ModifiedAtUtc`
-    mechanism - worth it, or is a simpler rule (alphabetical, creation
-    order) enough?
-  - Staying local-only means two devices can legitimately show the same
-    Shared categories in different orders.
-- If a hidden category is still in local storage (option A above), does it
-  still hold a position in the order? Or is order only ever assigned/read
-  for categories that are currently visible?
-- Reordering UX: could hidden categories be surfaced temporarily while a
-  drag-reorder is in progress, so their position can still be adjusted
-  without fully un-hiding them - or is that unnecessary complexity if a
-  hidden category doesn't need a position at all while it's hidden?
+**Save.** If the user clicks Save then setup the live connection as the
+application does now. On downloading the categories however, ignore any that
+were not checked. Ignored shared categories are not stored in the local
+database.
 
-### 3. Where/how does the user toggle "hidden" for a category?
+The unchecked categories are persisted, by category id, alongside the
+Firestore credentials in `SettingsService`. Storing the *unchecked* set
+(rather than the checked one) is what lets new remote categories appear
+automatically. Changing the key to a different Firebase project discards the
+stored set. Existing installations upgrading to this version start with an
+empty set, i.e. every current Shared category is checked.
 
-No longer a single Settings-dialog checkbox now that it's per-category.
-Candidates, not yet chosen: a header icon/button next to the existing
-wrench/trash icons, an Edit Category dialog checkbox, a context menu entry.
+**Reconfiguring.** If user clicks Settings -> Configure they are presented with
+the list with categories checked and unchecked as appropriate. All changes made
+there are applied only when the user clicks Save in the parent dialogue:
 
-### 4. Force Sync
+- A newly unchecked category is removed from the local database, along with
+  its snippets. This is local only - it must not delete anything from the
+  remote database. If the category has local snippets that haven't yet synced
+  to the remote database, warn the user that they'll be lost and ask them to
+  confirm before proceeding.
+- A newly checked category is downloaded and saved to the local database.
 
-- Still wanted, to get data flowing immediately after pasting a key,
-  before Save.
-- The earlier idea of gating the hide setting behind "has this device ever
-  completed a sync" may not even be needed anymore: a category can only be
-  hidden if it's already known locally, which already requires it to have
-  synced at least once to exist here in the first place. So Force Sync and
-  the hide feature may end up independent of each other.
-- Where should the button live, and should it avoid mutating the live
-  Firestore connection (so it's safe to click and then Cancel out of the
-  dialog), or is that no longer a real constraint once it's not tied into
-  the Settings Save/Cancel flow?
+**Normal operation.** When new categories are notified during normal operation
+always add it to the UI as currently happens - the user needs to go through
+Settings to hide it.
 
-## Out of scope for now
+Snippet changes notified for ignored categories should be ignored.
 
-Nothing beyond "Settled" above is decided. This document exists to lay out
-the shape of the problem, not to lock in an approach - implementation
-planning should wait until these are resolved.
+**Filtering in Firestore.** Ignored categories are filtered out by the
+Firestore queries themselves, not after download, since snippets (images
+especially) are the heavyweight documents:
+
+- The categories listener filters on document id `not-in` the unchecked set.
+- Snippet documents gain a `CategorySyncId` field (their parent category's
+  id), and the snippets collection-group listener filters on it `not-in` the
+  unchecked set.
+- When the unchecked set is empty no filter is applied (Firestore rejects an
+  empty `not-in`, and no index is then needed).
+
+Filtering snippets on `CategorySyncId` needs a single-field index exemption on
+the `snippets` collection group for `CategorySyncId`, with collection-group
+scope enabled. Add this as a new step after "2. Enable Firestore" in the
+README's "Sharing across devices" setup steps. If the listener later fails at
+runtime (e.g. the index is missing), Shared category headers show the existing
+warning icon, which opens Settings where the index creation link is shown.
+
+No migration: existing Firestore documents lack `CategorySyncId` and would be
+excluded by `not-in`, so the remote database is cleared, every device upgraded,
+and categories re-shared.
+
+**Order.** The remote database should not have any concept of category order
+because individual devices may have different priorities. `Order` is removed
+from the category document and a remote category change no longer alters local
+order. Shared categories downloaded from the remote database are added at the
+top, in the order they arrive - both on initial download and later during
+normal operation - but can be reordered the same as other categories. Shared
+categories created on this device are added at the bottom, as now.
+
+Snippet order within a Shared category still syncs as now.
+
+**Force Sync** is dropped; Configure covers getting data flowing immediately
+after pasting a key.
