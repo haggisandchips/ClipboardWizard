@@ -4,6 +4,7 @@ using ClipboardWizard.Service.Firestore;
 using ClipboardWizard.View;
 using ClipboardWizard.ViewModel;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -65,7 +66,7 @@ namespace ClipboardWizard
                 FirestoreCredentials firestoreCredentials = settingsService.Load();
                 if (firestoreCredentials != null)
                 {
-                    firestoreSyncService.Configure(firestoreCredentials);
+                    firestoreSyncService.Configure(firestoreCredentials, new HashSet<string>(firestoreCredentials.HiddenCategorySyncIds ?? new List<string>()));
                 }
                 firestoreSyncService.Start();
 

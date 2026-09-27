@@ -18,6 +18,10 @@ namespace ClipboardWizard.Service.Firestore
         [FirestoreProperty]
         public string Description { get; set; }
 
+        /// <summary>Owning category's SyncId, duplicated onto every snippet doc (Firestore has no cheap "parent id" query) so the snippets collection-group listener can filter out hidden categories via a not-in query.</summary>
+        [FirestoreProperty]
+        public string CategorySyncId { get; set; }
+
         [FirestoreProperty]
         public string Content { get; set; }
 

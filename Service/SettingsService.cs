@@ -1,5 +1,6 @@
 using ClipboardWizard.Model;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,10 +17,16 @@ namespace ClipboardWizard.Service
             _filePath = filePath;
         }
 
-        /// <summary>On-disk shape - the service-account JSON is DPAPI-protected before it ever reaches disk, since it's a full-admin credential.</summary>
+        /// <summary>
+        /// On-disk shape - the service-account JSON is DPAPI-protected before it ever reaches
+        /// disk, since it's a full-admin credential. HiddenCategorySyncIds is just a list of ids,
+        /// not secret, so it's stored in plain JSON alongside the protected blob.
+        /// </summary>
         private class PersistedSettings
         {
             public string ProtectedServiceAccountJsonBase64 { get; set; }
+
+            public List<string> HiddenCategorySyncIds { get; set; }
         }
 
         public FirestoreCredentials Load()
@@ -40,7 +47,11 @@ namespace ClipboardWizard.Service
                 byte[] protectedBytes = Convert.FromBase64String(persisted.ProtectedServiceAccountJsonBase64);
                 byte[] plainBytes = ProtectedData.Unprotect(protectedBytes, null, DataProtectionScope.CurrentUser);
 
-                return new FirestoreCredentials { ServiceAccountJson = Encoding.UTF8.GetString(plainBytes) };
+                return new FirestoreCredentials
+                {
+                    ServiceAccountJson = Encoding.UTF8.GetString(plainBytes),
+                    HiddenCategorySyncIds = persisted.HiddenCategorySyncIds ?? new List<string>()
+                };
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or FormatException or CryptographicException)
             {
@@ -66,7 +77,11 @@ namespace ClipboardWizard.Service
                 byte[] plainBytes = Encoding.UTF8.GetBytes(settings.ServiceAccountJson ?? string.Empty);
                 byte[] protectedBytes = ProtectedData.Protect(plainBytes, null, DataProtectionScope.CurrentUser);
 
-                PersistedSettings persisted = new() { ProtectedServiceAccountJsonBase64 = Convert.ToBase64String(protectedBytes) };
+                PersistedSettings persisted = new()
+                {
+                    ProtectedServiceAccountJsonBase64 = Convert.ToBase64String(protectedBytes),
+                    HiddenCategorySyncIds = settings.HiddenCategorySyncIds ?? new List<string>()
+                };
                 File.WriteAllText(_filePath, JsonSerializer.Serialize(persisted));
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or CryptographicException)

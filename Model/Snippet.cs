@@ -138,6 +138,26 @@ namespace ClipboardWizard.Model
             }
         }
 
+        private bool _pendingSync;
+
+        /// <summary>
+        /// True from the moment a Shared-category edit is stamped for push until that push
+        /// actually succeeds (see WizardViewModel's StampForSyncIfOwningCategoryShared/
+        /// TryPushSnippetAsync) - lets a "hide this category" confirmation warn accurately about
+        /// snippets that genuinely haven't reached Firestore yet, instead of guessing from their
+        /// mere existence. Existing rows created before this column existed default to false,
+        /// which is the safe assumption for snippets that predate this tracking entirely.
+        /// </summary>
+        public bool PendingSync
+        {
+            get => _pendingSync;
+            set
+            {
+                _pendingSync = value;
+                OnPropertyChanged(nameof(PendingSync));
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChanged(string propertyName)

@@ -10,9 +10,6 @@ namespace ClipboardWizard.Service.Firestore
         public string Name { get; set; }
 
         [FirestoreProperty]
-        public int Order { get; set; }
-
-        [FirestoreProperty]
         public Timestamp ModifiedAtUtc { get; set; }
 
         [FirestoreProperty]

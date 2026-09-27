@@ -14,7 +14,8 @@
 
     <DockPanel Margin="10">
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0 10 0 0">
-            <Button Content="Save" IsEnabled="{Binding IsValid}" Click="Save_Click" Margin="5" TabIndex="3" IsDefault="True" />
+            <Button Content="Configure..." Click="Configure_Click" IsEnabled="{Binding IsValid}" Margin="5" Padding="10 4" TabIndex="2" />
+            <Button Content="Save" IsEnabled="{Binding CanSave}" Click="Save_Click" Margin="5" TabIndex="3" IsDefault="True" />
             <Button Content="Cancel" Click="Cancel_Click" Margin="5" TabIndex="4" IsCancel="True" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Top">
@@ -49,24 +50,21 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
-            <DockPanel Margin="0 12 0 0">
-                <Button Content="Test Connection" Click="TestConnection_Click" IsEnabled="{Binding IsValid}" DockPanel.Dock="Left" Padding="10 4" TabIndex="2" />
-                <TextBlock Margin="10 0 0 0" VerticalAlignment="Center" TextWrapping="Wrap" Text="{Binding TestResultMessage}">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="Firebrick" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding LastTestSucceeded}" Value="True">
-                                    <Setter Property="Foreground" Value="DarkGreen" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding IsTesting}" Value="True">
-                                    <Setter Property="Foreground" Value="Gray" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-            </DockPanel>
+            <TextBlock x:Name="TestResultTextBlock" Margin="0 12 0 0" TextWrapping="Wrap">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="Firebrick" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding LastTestSucceeded}" Value="True">
+                                <Setter Property="Foreground" Value="DarkGreen" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsTesting}" Value="True">
+                                <Setter Property="Foreground" Value="Gray" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
         </StackPanel>
     </DockPanel>
 </mah:MetroWindow>

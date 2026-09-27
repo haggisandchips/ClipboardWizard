@@ -7,6 +7,9 @@ namespace ClipboardWizard.Service.Firestore
     {
         FirestoreConnectionState State { get; }
 
+        /// <summary>The raw detail of the most recent connection failure (e.g. a Firestore missing-index message, which embeds a console link to create it), or null if the last attempt succeeded/none has happened yet. Only meaningful while State is Error.</summary>
+        string LastErrorDetail { get; }
+
         event EventHandler StateChanged;
     }
 }

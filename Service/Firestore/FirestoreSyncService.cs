@@ -23,6 +23,7 @@ namespace ClipboardWizard.Service.Firestore
         private const string CategoriesCollectionId = "categories";
         private const string SnippetsCollectionId = "snippets";
         private const string ImageChunksCollectionId = "imageChunks";
+        private const string SnippetCategorySyncIdField = "CategorySyncId";
 
         private IFirestoreSyncEventSink _sink;
 
@@ -33,8 +34,10 @@ namespace ClipboardWizard.Service.Firestore
 
         private readonly object _stateLock = new();
         private FirestoreConnectionState _state = FirestoreConnectionState.NotConfigured;
+        private string _lastErrorDetail;
 
         private FirestoreCredentials _credentials;
+        private IReadOnlySet<string> _hiddenCategorySyncIds = new HashSet<string>();
         private FirestoreDb _db;
         private FirestoreChangeListener _categoryListener;
         private FirestoreChangeListener _snippetListener;
@@ -45,11 +48,17 @@ namespace ClipboardWizard.Service.Firestore
             get { lock (_stateLock) { return _state; } }
         }
 
+        public string LastErrorDetail
+        {
+            get { lock (_stateLock) { return _lastErrorDetail; } }
+        }
+
         public event EventHandler StateChanged;
 
-        public void Configure(FirestoreCredentials credentials)
+        public void Configure(FirestoreCredentials credentials, IReadOnlySet<string> hiddenCategorySyncIds)
         {
             _credentials = credentials;
+            _hiddenCategorySyncIds = hiddenCategorySyncIds ?? new HashSet<string>();
             if (_running)
             {
                 _ = ReconnectAsync();
@@ -84,18 +93,28 @@ namespace ClipboardWizard.Service.Firestore
             try
             {
                 FirestoreDb db = await BuildDbAsync(_credentials);
-                FirestoreChangeListener categoryListener = db.Collection(CategoriesCollectionId).Listen(OnCategoriesSnapshotAsync);
-                FirestoreChangeListener snippetListener = db.CollectionGroup(SnippetsCollectionId).Listen(OnSnippetsSnapshotAsync);
+
+                Query categoriesQuery = _hiddenCategorySyncIds.Count > 0
+                    ? db.Collection(CategoriesCollectionId).WhereNotIn(FieldPath.DocumentId, _hiddenCategorySyncIds.ToList())
+                    : db.Collection(CategoriesCollectionId);
+                Query snippetsQuery = _hiddenCategorySyncIds.Count > 0
+                    ? db.CollectionGroup(SnippetsCollectionId).WhereNotIn(SnippetCategorySyncIdField, _hiddenCategorySyncIds.ToList())
+                    : db.CollectionGroup(SnippetsCollectionId);
+
+                FirestoreChangeListener categoryListener = categoriesQuery.Listen(OnCategoriesSnapshotAsync);
+                FirestoreChangeListener snippetListener = snippetsQuery.Listen(OnSnippetsSnapshotAsync);
 
                 _db = db;
                 _categoryListener = categoryListener;
                 _snippetListener = snippetListener;
 
+                lock (_stateLock) { _lastErrorDetail = null; }
                 SetState(FirestoreConnectionState.Connected);
             }
             catch (Exception ex)
             {
                 Logger.LogError(nameof(ReconnectAsync), ex);
+                lock (_stateLock) { _lastErrorDetail = (ex as RpcException)?.Status.Detail; }
                 SetState(FirestoreConnectionState.Error);
             }
         }
@@ -163,12 +182,66 @@ namespace ClipboardWizard.Service.Firestore
             }
         }
 
+        public async Task<IReadOnlyList<RemoteCategorySnapshot>> FetchCategoryListAsync(FirestoreCredentials credentials, CancellationToken cancellationToken = default)
+        {
+            FirestoreDb db = await BuildDbAsync(credentials);
+            QuerySnapshot snapshot = await db.Collection(CategoriesCollectionId).GetSnapshotAsync(cancellationToken);
+
+            List<RemoteCategorySnapshot> categories = new();
+            foreach (DocumentSnapshot doc in snapshot.Documents)
+            {
+                CategoryDocument document = doc.ConvertTo<CategoryDocument>();
+                categories.Add(new RemoteCategorySnapshot
+                {
+                    SyncId = doc.Reference.Id,
+                    Name = document.Name,
+                    ModifiedAtUtc = document.ModifiedAtUtc.ToDateTime()
+                });
+            }
+            return categories;
+        }
+
+        public async Task<FirestoreTestResult> VerifyHiddenSetAsync(FirestoreCredentials credentials, IReadOnlySet<string> hiddenCategorySyncIds, CancellationToken cancellationToken = default)
+        {
+            if (hiddenCategorySyncIds == null || hiddenCategorySyncIds.Count == 0)
+            {
+                return FirestoreTestResult.Ok("Nothing hidden - no index needed.");
+            }
+
+            try
+            {
+                FirestoreDb db = await BuildDbAsync(credentials);
+                List<string> ids = hiddenCategorySyncIds.ToList();
+
+                await db.Collection(CategoriesCollectionId).WhereNotIn(FieldPath.DocumentId, ids).Limit(1).GetSnapshotAsync(cancellationToken);
+                await db.CollectionGroup(SnippetsCollectionId).WhereNotIn(SnippetCategorySyncIdField, ids).Limit(1).GetSnapshotAsync(cancellationToken);
+
+                return FirestoreTestResult.Ok("Filter verified.");
+            }
+            catch (RpcException ex)
+            {
+                return FirestoreTestResult.Failed(DescribeRpcFailure(ex));
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(nameof(VerifyHiddenSetAsync), new Exception(ex.GetType().Name));
+                return FirestoreTestResult.Failed("Couldn't verify the hidden-category filter - check the service-account key is valid JSON and the project id is correct.");
+            }
+        }
+
+        /// <summary>
+        /// For FailedPrecondition (a missing composite/single-field index), Firestore's own detail
+        /// message already embeds a console link to create the exact index needed - passed through
+        /// verbatim rather than replaced with a generic sentence, since that link is the actionable
+        /// part.
+        /// </summary>
         private static string DescribeRpcFailure(RpcException ex) => ex.StatusCode switch
         {
             StatusCode.PermissionDenied => "Permission denied - check the service account's IAM role includes Firestore access.",
             StatusCode.Unauthenticated => "Authentication failed - the service-account key may be invalid or revoked.",
             StatusCode.NotFound => "Project or database not found - check the project id and that Firestore is enabled for it.",
             StatusCode.Unavailable => "Couldn't reach Firestore - check your network connection.",
+            StatusCode.FailedPrecondition => ex.Status.Detail ?? "Firestore needs an index for this query.",
             _ => $"Firestore error ({ex.StatusCode})."
         };
 
@@ -194,7 +267,7 @@ namespace ClipboardWizard.Service.Firestore
             DocumentReference snippetRef = db.Collection(CategoriesCollectionId).Document(category.SyncId)
                 .Collection(SnippetsCollectionId).Document(snippet.SyncId);
 
-            await WriteSnippetAsync(db, snippetRef, snippet, cancellationToken);
+            await WriteSnippetAsync(db, snippetRef, category.SyncId, snippet, cancellationToken);
         }
 
         public async Task PushCategoryBulkAsync(Category category, IReadOnlyList<Snippet> snippets, CancellationToken cancellationToken = default)
@@ -206,7 +279,7 @@ namespace ClipboardWizard.Service.Firestore
             }
         }
 
-        private async Task WriteSnippetAsync(FirestoreDb db, DocumentReference snippetRef, Snippet snippet, CancellationToken cancellationToken)
+        private async Task WriteSnippetAsync(FirestoreDb db, DocumentReference snippetRef, string categorySyncId, Snippet snippet, CancellationToken cancellationToken)
         {
             SnippetDocument document = new()
             {
@@ -216,7 +289,8 @@ namespace ClipboardWizard.Service.Firestore
                 Order = snippet.Order,
                 Locked = snippet.Locked,
                 ModifiedAtUtc = ToTimestamp(snippet.ModifiedAtUtc),
-                LastWriterId = _instanceWriterId
+                LastWriterId = _instanceWriterId,
+                CategorySyncId = categorySyncId
             };
 
             bool isChunkedImage = snippet.Type == SnippetType.Image
@@ -326,7 +400,6 @@ namespace ClipboardWizard.Service.Firestore
                     {
                         SyncId = categorySyncId,
                         Name = document.Name,
-                        Order = document.Order,
                         ModifiedAtUtc = document.ModifiedAtUtc.ToDateTime()
                     });
                 }
@@ -426,7 +499,6 @@ namespace ClipboardWizard.Service.Firestore
         private CategoryDocument ToCategoryDocument(Category category) => new()
         {
             Name = category.Name,
-            Order = category.Order,
             ModifiedAtUtc = ToTimestamp(category.ModifiedAtUtc),
             LastWriterId = _instanceWriterId
         };
