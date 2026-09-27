@@ -10,6 +10,9 @@ namespace ClipboardWizard.ViewModel
 
         public bool IsNew { get; }
 
+        /// <summary>Whether the Shared checkbox is shown at all - true for a new category, or an existing one that isn't Shared yet. Once Shared, it's a one-way latch (see Category.Shared) so there's nothing left to toggle.</summary>
+        public bool CanToggleShared { get; }
+
         public string Title => IsNew ? "New Category" : "Edit Category";
 
         public string ActionButtonText => IsNew ? "Save" : "Update";
@@ -49,6 +52,7 @@ namespace ClipboardWizard.ViewModel
         {
             _firestoreStatus = firestoreStatus;
             IsNew = true;
+            CanToggleShared = true;
         }
 
         public AddCategoryViewModel(Category category, IFirestoreStatusProvider firestoreStatus)
@@ -57,6 +61,7 @@ namespace ClipboardWizard.ViewModel
             IsNew = false;
             Name = category.Name;
             Shared = category.Shared;
+            CanToggleShared = !category.Shared;
         }
 
         private void OnPropertyChanged(string propertyName)

@@ -67,5 +67,33 @@ namespace ClipboardWizard.Tests.ViewModel
             Assert.Equal("Work", viewModel.Name);
             Assert.True(viewModel.Shared);
         }
+
+        [Fact]
+        public void NewConstructor_CanToggleSharedIsTrue()
+        {
+            AddCategoryViewModel viewModel = new(new FakeFirestoreStatusProvider());
+
+            Assert.True(viewModel.CanToggleShared);
+        }
+
+        [Fact]
+        public void EditConstructor_NotYetShared_CanToggleSharedIsTrue()
+        {
+            Category category = new() { Name = "Work", Shared = false };
+
+            AddCategoryViewModel viewModel = new(category, new FakeFirestoreStatusProvider());
+
+            Assert.True(viewModel.CanToggleShared);
+        }
+
+        [Fact]
+        public void EditConstructor_AlreadyShared_CanToggleSharedIsFalse()
+        {
+            Category category = new() { Name = "Work", Shared = true };
+
+            AddCategoryViewModel viewModel = new(category, new FakeFirestoreStatusProvider());
+
+            Assert.False(viewModel.CanToggleShared);
+        }
     }
 }

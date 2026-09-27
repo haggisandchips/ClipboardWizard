@@ -29,7 +29,7 @@ namespace ClipboardWizard.Tests.Fakes
             return Task.CompletedTask;
         }
 
-        public List<(CategoryViewModel Category, string NewName)> Edits { get; } = new();
+        public List<(CategoryViewModel Category, string NewName, bool Shared)> Edits { get; } = new();
 
         public Task UpdateCategoryAsync(Category category)
         {
@@ -43,9 +43,9 @@ namespace ClipboardWizard.Tests.Fakes
             return Task.CompletedTask;
         }
 
-        public Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName)
+        public Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool shared)
         {
-            Edits.Add((categoryViewModel, newName));
+            Edits.Add((categoryViewModel, newName, shared));
             return Task.CompletedTask;
         }
 

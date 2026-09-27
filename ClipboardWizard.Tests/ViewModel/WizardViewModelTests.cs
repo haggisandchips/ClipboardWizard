@@ -737,7 +737,7 @@ namespace ClipboardWizard.Tests.ViewModel
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.ApplyCategoryEditAsync(category, "Renamed");
+            await viewModel.ApplyCategoryEditAsync(category, "Renamed", shared: true);
 
             Assert.Equal("Renamed", category.Category.Name);
             Assert.Single(firestoreSyncService.PushedCategories);
@@ -751,11 +751,44 @@ namespace ClipboardWizard.Tests.ViewModel
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.ApplyCategoryEditAsync(category, "Renamed");
+            await viewModel.ApplyCategoryEditAsync(category, "Renamed", shared: false);
 
             Assert.Equal("Renamed", category.Category.Name);
             Assert.Empty(firestoreSyncService.BulkPushes);
             Assert.Empty(firestoreSyncService.PushedCategories);
+        }
+
+        [Fact]
+        public async Task ApplyCategoryEditAsync_TurnsOnSharing_PushesCategoryAndExistingSnippets()
+        {
+            var (viewModel, repository, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+
+            await viewModel.ApplyCategoryEditAsync(category, "Work", shared: true);
+
+            Assert.True(category.Category.Shared);
+            Assert.NotNull(category.Category.SyncId);
+            Assert.Single(firestoreSyncService.PushedCategories);
+            Assert.Equal(2, firestoreSyncService.PushedSnippets.Count);
+            Assert.All(category.Snippets, s => Assert.NotNull(s.Snippet.SyncId));
+            Assert.All(category.Snippets, s => Assert.False(s.Snippet.PendingSync));
+        }
+
+        [Fact]
+        public async Task ApplyCategoryEditAsync_AlreadyShared_IgnoresSharedFalse()
+        {
+            var (viewModel, _, categoryRepository, _, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+
+            await viewModel.ApplyCategoryEditAsync(category, "Work", shared: false);
+
+            Assert.True(category.Category.Shared);
         }
 
         [Fact]

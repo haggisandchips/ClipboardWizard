@@ -72,17 +72,20 @@ section containing that category's snippet tiles. The pinned
 category, and can't be deleted or reordered.
 - **Create** — the **New Category** button (see Manual add, above) opens
   a dialog for a name and, optionally, Shared (see Sharing, below).
-- **Edit** — click the pencil icon on a category's header to rename it.
-  Shared can't be changed here - see Sharing.
+- **Edit** — click the pencil icon on a category's header to rename it, and
+  (see Sharing, below) turn Shared on if it isn't already - Shared can
+  never be turned back off, so once it's on the checkbox is gone.
 - **Delete** — click the trash icon on a category's header. This isn't a
-  single click: a confirmation prompt must be accepted first. For a
-  non-Shared category, its snippets move to Uncategorized rather than being
-  deleted with it. A Shared category is all-or-nothing instead: the same
-  delete also removes it from Firestore, and its snippets are deleted
-  outright too, not uncategorized - matching what every other device
-  sharing that category ends up doing on the same delete. That second,
-  larger consequence gets its own, separate confirmation - spelling out how
-  many snippets are about to be permanently lost - on top of the first.
+  single click: a confirmation prompt must be accepted first - except a
+  non-Shared, empty category, which is deleted immediately, since nothing
+  beyond its own name is at stake. For a non-Shared category with snippets,
+  they move to Uncategorized rather than being deleted with it. A Shared
+  category is all-or-nothing instead: the same delete also removes it from
+  Firestore, and its snippets are deleted outright too, not uncategorized -
+  matching what every other device sharing that category ends up doing on
+  the same delete. That second, larger consequence gets its own, separate
+  confirmation - spelling out how many snippets are about to be permanently
+  lost - on top of the first.
 - **Expand/collapse** — click a section's header (anywhere except the trash
   icon). Real categories persist this immediately; Uncategorized's state is
   saved with the window's other leftover placement on close.
@@ -96,23 +99,43 @@ category, and can't be deleted or reordered.
   onto another (anywhere in its bounds, not just the header), with the same
   drop-indicator and no-op-suppression behaviour as snippet tiles.
 
-**Sharing.** A category can be marked **Shared** (a checkbox in the
-New Category dialog, only) to sync its snippets - text and images - to a
+**Sharing.** A category can be marked **Shared** (a checkbox in the New or
+Edit Category dialog) to sync its snippets - text and images - to a
 Firestore database, and pull down matching changes from any other machine
-sharing that same category, in near-realtime and without polling. Shared
-can only be set when a category is created - it can't be turned on or off
-afterward, only the name can (see Edit, above). Each user points the app
-at their own Firebase project:
+sharing that same category, in near-realtime and without polling. Turning
+Shared on for an existing category pushes everything already in it, not
+just changes from that point on. Shared is one-way: once on, it can never
+be turned back off, so a category that's already Shared no longer shows
+the checkbox at all when edited. Each user points the app at their own
+Firebase project:
 - **Settings** - opened via the cog icon in the title bar - holds a
   GCP service-account key (pasted or loaded from its downloaded `.json`
-  file), encrypted at rest with Windows DPAPI. A Test Connection button
-  verifies it against Firestore before saving.
+  file), encrypted at rest with Windows DPAPI. A **Configure...** button
+  tests the connection and, on success, lists every Shared category
+  already in the remote database with a checkbox each - uncheck any this
+  machine shouldn't sync or show (at most 10 at once, a Firestore limit),
+  then **OK**, then **Save**. Unchecked categories are filtered out at the
+  Firestore query level, so their snippets - images especially - are never
+  even downloaded, not just hidden after the fact.
+- Which categories are hidden is remembered per machine, as the *unchecked*
+  set - so a newly-shared category from any machine shows up on every
+  other machine by default; you opt individual machines out; you don't opt
+  categories in. Unchecking one that's already synced here removes it and
+  its snippets from this machine's local database only, never from the
+  shared database - with a confirmation first if any of its snippets might
+  not have finished syncing yet. Re-checking it re-downloads it.
 - While a category is Shared but Firebase hasn't been set up or isn't
   currently connected, its header shows a warning icon; clicking it opens
   Settings.
 - Deleting a Shared category always deletes its Firestore copy, and its
   snippets, too (see Delete, above) - there's no way to delete it locally
-  while leaving the cloud copy, or its snippets, in place.
+  while leaving the cloud copy, or its snippets, in place. This is
+  different from hiding it (above), which only ever affects this machine.
+- Category order is never synced - different machines may want different
+  priorities. A Shared category, whenever it first appears on a machine
+  (via normal sync or by re-checking it in Configure), lands at the top of
+  that machine's list, ahead of every other category; from then on it
+  reorders the same as any other category, locally, on that machine only.
 - Conflicts between two machines' offline edits are resolved by last
   writer wins, silently - there's no merge or conflict UI.
 - Images larger than Firestore's per-document limit are chunked

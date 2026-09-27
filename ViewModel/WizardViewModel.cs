@@ -173,10 +173,19 @@ namespace ClipboardWizard.ViewModel
             return _categoryRepository.UpdateCategoryAsync(category);
         }
 
-        public async Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName)
+        public async Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool shared)
         {
             Category category = categoryViewModel.Category;
             category.Name = newName?.Trim();
+
+            // Shared is a one-way latch (see Category.Shared) - this is the only place besides
+            // creation that can turn it on, and only ever on, never off.
+            bool justShared = shared && !category.Shared;
+            if (justShared)
+            {
+                category.Shared = true;
+                category.SyncId = Guid.NewGuid().ToString("N");
+            }
 
             if (category.Shared)
             {
@@ -187,8 +196,18 @@ namespace ClipboardWizard.ViewModel
 
             if (category.Shared)
             {
-                // Push the updated category doc so the rename propagates to other devices.
+                // Push the updated category doc so the rename (or the brand-new share) propagates.
                 await TryPushCategoryAsync(category);
+            }
+
+            if (justShared)
+            {
+                // Existing snippets weren't stamped for sync until now - push every one of them,
+                // not just changes from this point on.
+                foreach (SnippetViewModel snippetViewModel in categoryViewModel.Snippets.ToList())
+                {
+                    await UpdateSnippetAsync(snippetViewModel.Snippet);
+                }
             }
         }
 
