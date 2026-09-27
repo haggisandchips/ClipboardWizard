@@ -5,6 +5,8 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-27
+
 ### Added
 
 - Per-machine control over which Shared categories actually sync/show here:
