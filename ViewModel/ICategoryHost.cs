@@ -23,12 +23,12 @@ namespace ClipboardWizard.ViewModel
         Task DeleteCategoryAsync(CategoryViewModel categoryViewModel);
 
         /// <summary>
-        /// Applies a rename from the Edit Category dialog. Shared can only be set when a
-        /// category is created (see WizardViewModel.AddCategoryAsync) and never changes
-        /// afterward, so this only ever renames - pushing the updated name too, if the category
-        /// is already Shared.
+        /// Applies a rename from the Edit Category dialog, and turns Shared on if requested and
+        /// not already on (see Category.Shared - it's a one-way latch, so shared=false here is
+        /// simply ignored once the category is already Shared). Turning Shared on for the first
+        /// time pushes every snippet already in the category, not just the category doc itself.
         /// </summary>
-        Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName);
+        Task ApplyCategoryEditAsync(CategoryViewModel categoryViewModel, string newName, bool shared);
 
         /// <summary>
         /// Drag-and-drop reordering: moves categoryViewModel to sit immediately before or after

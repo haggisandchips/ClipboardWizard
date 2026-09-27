@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 
 namespace ClipboardWizard.Model
@@ -12,6 +13,14 @@ namespace ClipboardWizard.Model
     {
         /// <summary>The raw GCP service-account key, exactly as downloaded from the Firebase/GCP console. A full-admin credential - see SettingsService for how it's protected at rest.</summary>
         public string ServiceAccountJson { get; set; }
+
+        /// <summary>
+        /// SyncIds of Shared categories this device has chosen not to sync/show (see Settings'
+        /// Configure flow) - stored as the *unchecked* set so a brand-new remote category shows
+        /// up automatically without this device having to opt into it. Not secret, unlike
+        /// ServiceAccountJson - see SettingsService for why it's persisted unencrypted.
+        /// </summary>
+        public List<string> HiddenCategorySyncIds { get; set; } = new();
 
         /// <summary>The service account's project id, parsed out of ServiceAccountJson for display - null if ServiceAccountJson isn't valid/complete JSON.</summary>
         public string ProjectId

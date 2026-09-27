@@ -5,6 +5,42 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+### Added
+
+- Per-machine control over which Shared categories actually sync/show here:
+  Settings' "Configure..." button (replacing "Test Connection") tests the
+  connection and then lists every Shared category in the remote database,
+  letting you uncheck any this machine shouldn't sync - at most 10 at once,
+  a Firestore limit. Unchecked categories (and their snippets, images
+  included) are never even downloaded, not just hidden after the fact.
+  Unchecking one that's already synced here removes it and its snippets
+  locally only, never from the shared database - with a confirmation if any
+  of its snippets might not have finished syncing yet. A newly-shared
+  category (from any machine) always shows up everywhere by default; you
+  opt individual machines *out*, not in.
+- A Shared category first seen via sync now always appears at the top of
+  the list, ahead of local categories too - category order is no longer
+  synced between machines at all (different machines may want different
+  priorities), only within a single machine.
+
+### Changed
+
+- A category's Shared setting can now be turned on at any time via Edit
+  Category, not just when it's created - turning it on pushes every
+  snippet already in the category, not just changes from that point on.
+  It's still one-way: once Shared, a category can never be turned back
+  off, so the checkbox disappears from Edit once it's on.
+- Deleting an empty, non-Shared category no longer asks for confirmation -
+  there's nothing at stake beyond the category's own name. Every other
+  delete (Shared, or non-Shared with snippets) still confirms as before.
+
+**Breaking**: upgrading requires clearing the remote Firestore database and
+re-sharing every category from each machine - existing snippet documents
+predate the `CategorySyncId` field the new per-category filtering relies on,
+and would otherwise silently disappear from any machine that hides even one
+category. See the README's updated "Sharing across devices" setup steps,
+including a new required Firestore index.
+
 ## [1.5.0] - 2026-09-24
 
 ### Changed

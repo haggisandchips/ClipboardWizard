@@ -17,6 +17,8 @@ namespace ClipboardWizard.Tests.Fakes
             }
         }
 
+        public string? LastErrorDetail { get; set; }
+
         public event System.EventHandler? StateChanged;
     }
 }

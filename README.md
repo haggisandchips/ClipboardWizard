@@ -69,7 +69,27 @@ connection.
    bypasses security rules entirely - but production mode is the safer
    default in case anything else ever touches this project.
 
-### 3. Create a service account
+### 3. Create the CategorySyncId index
+
+Hiding individual Shared categories (see "Configure Clipboard Wizard" below)
+filters synced snippets by a `CategorySyncId` field across every category's
+snippets subcollection at once - a collection-group query, which Firestore
+doesn't index automatically the way it does a plain per-collection field.
+
+1. In the Firebase console: **Build → Firestore Database → Indexes**.
+2. Switch to the **Single field** tab, click **Add exemption**.
+3. Collection ID: `snippets`. Field path: `CategorySyncId`.
+4. Under index scopes, enable **Collection group** (alongside or instead of
+   **Collection**), with both Ascending and Descending enabled.
+5. Save. This can take a few minutes to build - it's a one-time, per-project
+   step, not something to repeat per machine.
+
+If this step is skipped, hiding any category on any machine sharing this
+project fails with a "the query requires an index" error - Clipboard
+Wizard's Settings dialog shows Firestore's own error message when that
+happens, which includes a direct link to create the missing index.
+
+### 4. Create a service account
 
 Firebase projects are Google Cloud projects under the hood, so this step
 happens in the Cloud Console, not the Firebase one:
@@ -87,7 +107,7 @@ happens in the Cloud Console, not the Firebase one:
    key will live on your PC, so keep its blast radius small.
 5. Skip the optional "grant users access" step, click **Done**.
 
-### 4. Generate the key
+### 5. Generate the key
 
 1. Click into the service account you just created.
 2. Go to the **Keys** tab.
@@ -96,26 +116,32 @@ happens in the Cloud Console, not the Firebase one:
    - treat it like a password: don't commit it anywhere, don't share it,
    and revoke/rotate it if it ever leaks.
 
-### 5. Configure Clipboard Wizard
+### 6. Configure Clipboard Wizard
 
 1. Open Clipboard Wizard, click the **cog icon** in the title bar.
 2. Click **Browse...** and pick the downloaded `.json` file (or paste its
    contents directly into the box).
 3. The dialog shows the parsed project id underneath - confirm it matches
    your Firebase project.
-4. Click **Test Connection** - it should report success.
+4. Click **Configure...** - it tests the connection and, on success, lists
+   every Shared category already in the remote database. Uncheck any this
+   machine shouldn't sync or show, then click **OK**. A machine that's
+   never shared anything yet sees an empty list - that's fine, everything
+   comes checked by default as categories are shared later.
 5. Click **Save**.
 
-### 6. Share a category
+### 7. Share a category
 
 1. Create a new category (or edit an existing one) and check **Shared**.
 2. The warning icon on that category's header stays hidden as long as
    Firebase is configured and connected; it appears if Shared is on but
    the connection isn't.
 
-To sync between machines, repeat steps 3-5 on each of them, pointed at
+To sync between machines, repeat steps 4-6 on each of them, pointed at
 the *same* Firebase project (reuse the same key file, or generate a
-separate key per machine).
+separate key per machine) - step 3 is a one-time, per-project setup step,
+not something to repeat per machine. Re-run **Configure...** on a machine
+any time to change which categories it hides.
 
 ## Building from source
 

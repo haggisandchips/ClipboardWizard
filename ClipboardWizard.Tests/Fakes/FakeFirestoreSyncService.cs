@@ -19,9 +19,15 @@ namespace ClipboardWizard.Tests.Fakes
 
         public event System.EventHandler? StateChanged;
 
+        public string? LastErrorDetail { get; set; }
+
         public IFirestoreSyncEventSink? Sink { get; set; }
 
-        public List<FirestoreCredentials> Configured { get; } = new();
+        public List<(FirestoreCredentials Credentials, IReadOnlySet<string> HiddenCategorySyncIds)> Configured { get; } = new();
+
+        public IReadOnlyList<RemoteCategorySnapshot> NextCategoryList { get; set; } = new List<RemoteCategorySnapshot>();
+
+        public FirestoreTestResult NextVerifyResult { get; set; } = FirestoreTestResult.Ok("fake");
 
         public List<Category> PushedCategories { get; } = new();
 
@@ -39,14 +45,27 @@ namespace ClipboardWizard.Tests.Fakes
 
         public FirestoreTestResult NextTestResult { get; set; } = FirestoreTestResult.Ok("fake");
 
-        public void Configure(FirestoreCredentials credentials)
+        /// <summary>When set, PushSnippetAsync throws this instead of succeeding - simulates a push that fails (e.g. offline).</summary>
+        public Exception? NextPushSnippetException { get; set; }
+
+        public void Configure(FirestoreCredentials credentials, IReadOnlySet<string> hiddenCategorySyncIds)
         {
-            Configured.Add(credentials);
+            Configured.Add((credentials, hiddenCategorySyncIds));
         }
 
         public Task<FirestoreTestResult> TestConnectionAsync(FirestoreCredentials credentials, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(NextTestResult);
+        }
+
+        public Task<IReadOnlyList<RemoteCategorySnapshot>> FetchCategoryListAsync(FirestoreCredentials credentials, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(NextCategoryList);
+        }
+
+        public Task<FirestoreTestResult> VerifyHiddenSetAsync(FirestoreCredentials credentials, IReadOnlySet<string> hiddenCategorySyncIds, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(NextVerifyResult);
         }
 
         public void Start()
@@ -67,6 +86,11 @@ namespace ClipboardWizard.Tests.Fakes
 
         public Task PushSnippetAsync(Category category, Snippet snippet, CancellationToken cancellationToken = default)
         {
+            if (NextPushSnippetException != null)
+            {
+                throw NextPushSnippetException;
+            }
+
             PushedSnippets.Add((category, snippet));
             return Task.CompletedTask;
         }

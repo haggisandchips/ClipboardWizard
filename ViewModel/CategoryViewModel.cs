@@ -87,16 +87,24 @@ namespace ClipboardWizard.ViewModel
         /// <summary>
         /// Deleting a category isn't a single click: unlike a snippet (which is protected by an
         /// explicit lock step, see SnippetViewModel), a category has no such per-item opt-in, so
-        /// every delete confirms here instead. All-or-nothing: deleting a Shared category also
-        /// deletes it from Firestore - Shared can only be set when a category is created (see
-        /// AddCategoryViewModel) and never toggled off, so there's no separate "un-share" action
-        /// this could be confused with. A Shared category's snippets are deleted outright too,
-        /// not uncategorized (see WizardViewModel.DeleteCategoryAsync) - that's what every other
-        /// device sharing it ends up doing on the same delete, so a second, stronger prompt
-        /// spells that out before it happens.
+        /// every delete confirms here instead - except a non-Shared, empty category, where there's
+        /// nothing at stake beyond the category's own name, so it's just deleted outright. All-or-
+        /// nothing for Shared: deleting one also deletes it from Firestore - Shared can only be
+        /// set when a category is created (see AddCategoryViewModel) and never toggled off, so
+        /// there's no separate "un-share" action this could be confused with. A Shared category's
+        /// snippets are deleted outright too, not uncategorized (see
+        /// WizardViewModel.DeleteCategoryAsync) - that's what every other device sharing it ends
+        /// up doing on the same delete, so a second, stronger prompt spells that out before it
+        /// happens.
         /// </summary>
         internal async Task DeleteCategoryAsync()
         {
+            if (!Category.Shared && Snippets.Count == 0)
+            {
+                await _host.DeleteCategoryAsync(this);
+                return;
+            }
+
             string message = Category.Shared
                 ? $"Delete category \"{Category.Name}\"? It's Shared, so this also deletes it remotely for every device sharing it."
                 : $"Delete category \"{Category.Name}\"? This permanently deletes it from the database. Its snippets will become uncategorized, not deleted.";
@@ -146,7 +154,7 @@ namespace ClipboardWizard.ViewModel
                 return;
             }
 
-            await _host.ApplyCategoryEditAsync(this, editViewModel.Name);
+            await _host.ApplyCategoryEditAsync(this, editViewModel.Name, editViewModel.Shared);
         }
 
         /// <summary>Drag-and-drop reordering: moves this category immediately before/after <paramref name="target"/>.</summary>

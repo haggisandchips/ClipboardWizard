@@ -737,7 +737,7 @@ namespace ClipboardWizard.Tests.ViewModel
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.ApplyCategoryEditAsync(category, "Renamed");
+            await viewModel.ApplyCategoryEditAsync(category, "Renamed", shared: true);
 
             Assert.Equal("Renamed", category.Category.Name);
             Assert.Single(firestoreSyncService.PushedCategories);
@@ -751,11 +751,44 @@ namespace ClipboardWizard.Tests.ViewModel
             await viewModel.LoadAsync();
             CategoryViewModel category = Assert.Single(viewModel.Categories);
 
-            await viewModel.ApplyCategoryEditAsync(category, "Renamed");
+            await viewModel.ApplyCategoryEditAsync(category, "Renamed", shared: false);
 
             Assert.Equal("Renamed", category.Category.Name);
             Assert.Empty(firestoreSyncService.BulkPushes);
             Assert.Empty(firestoreSyncService.PushedCategories);
+        }
+
+        [Fact]
+        public async Task ApplyCategoryEditAsync_TurnsOnSharing_PushesCategoryAndExistingSnippets()
+        {
+            var (viewModel, repository, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0 });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1 });
+            repository.Snippets.Add(new Snippet { Id = 2, Content = "b", Order = 1, CategoryId = 1 });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+
+            await viewModel.ApplyCategoryEditAsync(category, "Work", shared: true);
+
+            Assert.True(category.Category.Shared);
+            Assert.NotNull(category.Category.SyncId);
+            Assert.Single(firestoreSyncService.PushedCategories);
+            Assert.Equal(2, firestoreSyncService.PushedSnippets.Count);
+            Assert.All(category.Snippets, s => Assert.NotNull(s.Snippet.SyncId));
+            Assert.All(category.Snippets, s => Assert.False(s.Snippet.PendingSync));
+        }
+
+        [Fact]
+        public async Task ApplyCategoryEditAsync_AlreadyShared_IgnoresSharedFalse()
+        {
+            var (viewModel, _, categoryRepository, _, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+
+            await viewModel.ApplyCategoryEditAsync(category, "Work", shared: false);
+
+            Assert.True(category.Category.Shared);
         }
 
         [Fact]
@@ -772,6 +805,54 @@ namespace ClipboardWizard.Tests.ViewModel
             Assert.NotNull(snippet.Snippet.SyncId);
             var pushed = Assert.Single(firestoreSyncService.PushedSnippets);
             Assert.Same(snippet.Snippet, pushed.Snippet);
+            Assert.False(snippet.Snippet.PendingSync);
+        }
+
+        [Fact]
+        public async Task UpdateSnippetAsync_InSharedCategory_PushFails_LeavesPendingSyncTrue()
+        {
+            var (viewModel, repository, categoryRepository, _, firestoreSyncService) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            repository.Snippets.Add(new Snippet { Id = 1, Content = "a", Order = 0, CategoryId = 1, SyncId = "snip-1" });
+            await viewModel.LoadAsync();
+            SnippetViewModel snippet = Assert.Single(viewModel.SnippetViewModels);
+            firestoreSyncService.NextPushSnippetException = new InvalidOperationException("offline");
+
+            await viewModel.UpdateSnippetAsync(snippet.Snippet);
+
+            Assert.True(snippet.Snippet.PendingSync);
+        }
+
+        [Fact]
+        public async Task SaveClipboardSnippetAsync_InSharedCategory_PushSucceeds_ClearsPendingSync()
+        {
+            var (viewModel, _, categoryRepository, clipboard, firestoreSyncService) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            clipboard.CurrentContent = new ClipboardContent { Type = ClipboardContentType.Text, Text = "note" };
+
+            await viewModel.SaveClipboardSnippetAsync(category.Category.Id);
+
+            SnippetViewModel saved = Assert.Single(category.Snippets);
+            Assert.Single(firestoreSyncService.PushedSnippets);
+            Assert.False(saved.Snippet.PendingSync);
+        }
+
+        [Fact]
+        public async Task SaveClipboardSnippetAsync_InSharedCategory_PushFails_LeavesPendingSyncTrue()
+        {
+            var (viewModel, _, categoryRepository, clipboard, firestoreSyncService) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Work", Order = 0, Shared = true, SyncId = "cat-1" });
+            await viewModel.LoadAsync();
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            clipboard.CurrentContent = new ClipboardContent { Type = ClipboardContentType.Text, Text = "note" };
+            firestoreSyncService.NextPushSnippetException = new InvalidOperationException("offline");
+
+            await viewModel.SaveClipboardSnippetAsync(category.Category.Id);
+
+            SnippetViewModel saved = Assert.Single(category.Snippets);
+            Assert.True(saved.Snippet.PendingSync);
         }
 
         [Fact]
@@ -885,7 +966,6 @@ namespace ClipboardWizard.Tests.ViewModel
             {
                 SyncId = "cat-remote",
                 Name = "From another machine",
-                Order = 0,
                 ModifiedAtUtc = DateTime.UtcNow
             });
 
@@ -907,11 +987,56 @@ namespace ClipboardWizard.Tests.ViewModel
             {
                 SyncId = "cat-1",
                 Name = "Stale remote name",
-                Order = 0,
                 ModifiedAtUtc = now.AddMinutes(-1)
             });
 
             Assert.Equal("Local name", viewModel.Categories[0].Category.Name);
+        }
+
+        [Fact]
+        public async Task OnRemoteCategoryPutAsync_UnknownSyncId_InsertsAtTopAndRenumbersExisting()
+        {
+            var (viewModel, _, categoryRepository, _, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category { Id = 1, Name = "Local", Order = 0 });
+            await viewModel.LoadAsync();
+
+            await ((IFirestoreSyncEventSink)viewModel).OnRemoteCategoryPutAsync(new RemoteCategorySnapshot
+            {
+                SyncId = "cat-remote",
+                Name = "From another machine",
+                ModifiedAtUtc = DateTime.UtcNow
+            });
+
+            Assert.Equal(new[] { "From another machine", "Local" }, viewModel.Categories.Select(c => c.Category.Name));
+            Assert.Equal(0, viewModel.Categories[0].Category.Order);
+            Assert.Equal(1, viewModel.Categories[1].Category.Order);
+        }
+
+        [Fact]
+        public async Task OnRemoteCategoryPutAsync_ExistingCategory_DoesNotChangeLocalOrder()
+        {
+            var (viewModel, _, categoryRepository, _, _) = CreateSutWithCategories();
+            categoryRepository.Categories.Add(new Category
+            {
+                Id = 1,
+                Name = "Old name",
+                Order = 5,
+                Shared = true,
+                SyncId = "cat-1",
+                ModifiedAtUtc = DateTime.UtcNow.AddMinutes(-10)
+            });
+            await viewModel.LoadAsync();
+
+            await ((IFirestoreSyncEventSink)viewModel).OnRemoteCategoryPutAsync(new RemoteCategorySnapshot
+            {
+                SyncId = "cat-1",
+                Name = "New name",
+                ModifiedAtUtc = DateTime.UtcNow
+            });
+
+            CategoryViewModel category = Assert.Single(viewModel.Categories);
+            Assert.Equal("New name", category.Category.Name);
+            Assert.Equal(5, category.Category.Order);
         }
 
         [Fact]

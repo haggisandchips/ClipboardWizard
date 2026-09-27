@@ -47,13 +47,20 @@ namespace ClipboardWizard.Model
         /// <summary>
         /// Whether this category's snippets sync to Firestore. Existing rows created before
         /// this column existed default to false, which is correct for them since sharing is
-        /// opt-in.
+        /// opt-in. Can be turned on at any time (New or Edit Category) but never back off, once
+        /// true - further assignments are silently ignored rather than throwing, the same
+        /// one-way-latch pattern as Snippet.Locked.
         /// </summary>
         public bool Shared
         {
             get => _shared;
             set
             {
+                if (_shared)
+                {
+                    return;
+                }
+
                 _shared = value;
                 OnPropertyChanged(nameof(Shared));
             }
