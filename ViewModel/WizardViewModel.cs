@@ -252,7 +252,7 @@ namespace ClipboardWizard.ViewModel
         /// Deletes a Shared category and every one of its snippets from the local database only -
         /// never touches Firestore. Used both by DeleteCategoryAsync (which deletes remotely too,
         /// right after this) and by the Settings "hide a category" flow (which must not - see
-        /// SPEC-hide-shared-categories.md's Reconfiguring section).
+        /// SPEC.md's Sharing section).
         /// </summary>
         private async Task DeleteSharedCategoryLocalOnlyAsync(CategoryViewModel categoryViewModel)
         {

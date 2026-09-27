@@ -140,8 +140,7 @@ namespace ClipboardWizard.View
                 IReadOnlyList<RemoteCategorySnapshot> categories = await viewModel.ConfigureAsync();
                 if (categories == null)
                 {
-                    // Connection test itself failed - already reported in the status message,
-                    // per SPEC-hide-shared-categories.md's Implementation section.
+                    // Connection test itself failed - already reported in the status message.
                     return;
                 }
 

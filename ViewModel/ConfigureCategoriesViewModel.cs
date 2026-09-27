@@ -9,7 +9,7 @@ namespace ClipboardWizard.ViewModel
     /// <summary>Backs the Settings "Configure" category picker - one row per Shared category in the remote database, checked unless it's in the currently-persisted hidden set.</summary>
     public class ConfigureCategoriesViewModel : INotifyPropertyChanged
     {
-        /// <summary>Firestore's `not-in` operator accepts at most 10 values - see SPEC-hide-shared-categories.md.</summary>
+        /// <summary>Firestore's `not-in` operator accepts at most 10 values.</summary>
         internal const int MaxHiddenCount = 10;
 
         public ObservableCollection<CategoryPickerItem> Categories { get; } = new();
