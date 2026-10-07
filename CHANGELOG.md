@@ -5,6 +5,14 @@ Notable changes to Clipboard Wizard. Format loosely follows
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-07
+
+### Changed
+
+- Tiles with very little text now show it in a much larger font, scaled by
+  the length of the label actually displayed (the description if there is
+  one, otherwise the content).
+
 ## [1.6.0] - 2026-09-27
 
 ### Added
