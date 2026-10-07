@@ -81,7 +81,12 @@ namespace ClipboardWizard.View.Control
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (value is not Snippet snippet)
+            return GetLabel(value as Snippet);
+        }
+
+        internal static string GetLabel(Snippet snippet)
+        {
+            if (snippet == null)
             {
                 return string.Empty;
             }
@@ -92,6 +97,58 @@ namespace ClipboardWizard.View.Control
             }
 
             return string.IsNullOrEmpty(snippet.Description) ? snippet.Content : snippet.Description;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotSupportedException();
+        }
+    }
+
+    /// <summary>
+    /// Font size for the tile's label, scaled up when there's very little text. Sized from
+    /// the label actually shown (<see cref="ContentConverter.GetLabel"/>: description if
+    /// present, else content), not from the raw content.
+    /// </summary>
+    internal class LabelFontSizeConverter : IValueConverter
+    {
+        private const double DefaultSize = 12;
+
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            string label = ContentConverter.GetLabel(value as Snippet).Trim();
+
+            if (label.Length == 0)
+            {
+                return DefaultSize;
+            }
+
+            // Short, single-line labels get big; each extra line eats vertical space.
+            int lines = 1;
+            foreach (char c in label)
+            {
+                if (c == '\n')
+                {
+                    lines++;
+                }
+            }
+
+            if (lines > 2)
+            {
+                return DefaultSize;
+            }
+
+            int effectiveLength = lines > 1 ? Math.Max(label.Length, lines * 12) : label.Length;
+
+            return effectiveLength switch
+            {
+                <= 4 => 44d,
+                <= 8 => 32d,
+                <= 14 => 24d,
+                <= 24 => 18d,
+                <= 40 => 14d,
+                _ => DefaultSize,
+            };
         }
 
         public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

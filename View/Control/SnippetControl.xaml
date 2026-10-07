@@ -70,6 +70,7 @@
         </Style>
         <local:StyleConverter x:Key="styleConverter"/>
         <local:ContentConverter x:Key="contentConverter"/>
+        <local:LabelFontSizeConverter x:Key="labelFontSizeConverter"/>
         <local:ImageBytesConverter x:Key="imageConverter"/>
         <local:IsNotEmptyConverter x:Key="isNotEmptyConverter"/>
     </UserControl.Resources>
@@ -123,6 +124,7 @@
                                 </Style>
                             </StackPanel.Style>
                             <TextBlock Text="{Binding Snippet, Converter={StaticResource contentConverter}}"
+                                       FontSize="{Binding Snippet, Converter={StaticResource labelFontSizeConverter}}"
                                        TextWrapping="Wrap" TextTrimming="CharacterEllipsis" TextAlignment="Center" />
                             <fa5:FontAwesome Icon="Solid_Image" Margin="0 6 0 0" HorizontalAlignment="Center" Foreground="Gray">
                                 <fa5:FontAwesome.Style>
